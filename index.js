@@ -1,19 +1,32 @@
 var crypto = require('crypto');
 
-var base = "Drake";
-var nonce = 0;
-var found = false;
+//crypto.createHash('sha256').update(base + nonce).digest('base16').toString('hex');
 
-var suffix = "abcd";
-
-while(!found){
-	var hash = crypto.createHash('sha256').update(base + nonce).digest('base16').toString('hex');
-	console.log(nonce + ": " + hash);
-	if(hash.substring(0,suffix.length) == suffix){
-		console.log("--------FOUND!--------");
-		console.log(base + nonce);
-		console.log(hash);
-		found = true;
+class Transaction {
+	constructor(sender, reciever, amount, isReward) {
+		this.sender = sender;
+		this.reciever = reciever;
+		this.amount = amount;
+		this.isReward = isReward;
 	}
-	nonce++;
 }
+
+class Block {
+	constructor(previousHash, transactions, timestamp) {
+		this.previousHash = previousHash;
+		this.transactions = transactions;
+		this.timestamp = timestamp;
+	}
+}
+
+var transactions = [
+	new Transaction("testsender1", "testreciever1", 0.005, false),
+	new Transaction("testsender2", "testreciever2", 0.002, false),
+	new Transaction("testsender3", "testreciever3", 0.008, false)
+];
+
+var preGenesisHash = "0000000000000000000000000000000000000000000000000000000000000000";
+var time = Math.round((new Date()).getTime() / 1000);
+var testBlock = new Block(preGenesisHash, transactions, time);
+
+console.log(JSON.stringify(testBlock));

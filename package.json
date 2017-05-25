@@ -1,0 +1,22 @@
+{
+  "name": "drakecoin",
+  "version": "1.0.0",
+  "description": "DrakeCoin is totally not a real cryptocurrency, and is basically just me learning about blockchains and cryptographic consensus.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ihatecsv/DrakeCoin.git"
+  },
+  "keywords": [
+    "cryptocurrency"
+  ],
+  "author": "ihatecsv",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ihatecsv/DrakeCoin/issues"
+  },
+  "homepage": "https://github.com/ihatecsv/DrakeCoin#readme"
+}

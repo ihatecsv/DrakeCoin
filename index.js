@@ -103,22 +103,25 @@ class Block {
 		this.timestamp = timestamp;
 	}
 }
+var genFakeTransactions = function(){
+	var transactions = [];
+	var numOfTransactions = Math.floor(Math.random()*100);
+	for(var i = 0; i < numOfTransactions; i++){
+		var time = Math.round((new Date()).getTime() / 1000);
+		var trans = new Transaction(sha256(Math.random()*10000 + ""), sha256(Math.random()*10000 + ""), Math.random(), time, false);
+		transactions.push(trans);
+	}
+	return transactions;
+}
 
-var exampleTransactions = [
-	new Transaction(null, "fre332", 0.0025, 1214416, true),
-	new Transaction("fr332", "blfah", 0.0025, 1214416, false),
-	new Transaction("blfah", "gsdfg", 0.0025, 1214416, false),
-	new Transaction("afdaf", "kdilv", 0.0025, 1214416, false),
-	new Transaction("asfkw", "drake", 0.0025, 1214416, false),
-	new Transaction("dkkp9", "go3hb", 0.0025, 1214416, false),
-	new Transaction("dweih", "djnjn", 0.0025, 1214416, false),
-	new Transaction("eee5f", "3jkkj", 0.0024, 1214416, false),
-	new Transaction("39ifm", "n3udu", 0.0025, 1214416, false),
-	new Transaction("3kmmd", "3ikm3", 0.0025, 1214416, false),
-	new Transaction("disal", "5ktkt", 0.0025, 1214416, false),
-	new Transaction("fdsjk", "329iv", 0.0025, 1214416, false),
-	new Transaction("sdfnm", "2kjni", 0.0025, 1214416, false)
-];
+var exampleTransactions = genFakeTransactions();
+
+var time = Math.round((new Date()).getTime() / 1000);
+var awardTrans = new Transaction(null, "me, the miner", 50, time, true);
+
+exampleTransactions.unshift(awardTrans);
+
+console.log(exampleTransactions);
 
 //var preGenesisHash = "0000000000000000000000000000000000000000000000000000000000000000";
 
@@ -126,7 +129,7 @@ var newTree = new MerkleTree();
 newTree.genTree(exampleTransactions);
 console.log(newTree.getRootHash());
 
-//var time = Math.round((new Date()).getTime() / 1000);
+//var time = ;
 //var testBlock = new Block(preGenesisHash, transactions, time);
 
 //console.log(JSON.stringify(testBlock));

@@ -125,7 +125,7 @@ class MinedBlockHeader {
 
 var genFakeTransactions = function(){
 	var transactions = [];
-	var numOfTransactions = Math.floor(Math.random()*100);
+	var numOfTransactions = Math.floor(Math.random()*20);
 	for(var i = 0; i < numOfTransactions; i++){
 		var time = Math.round((new Date()).getTime() / 1000);
 		var trans = new Transaction(sha256(Math.random()*10000 + ""), sha256(Math.random()*10000 + ""), Math.random(), time, false);
@@ -202,7 +202,7 @@ while(true){
 	
 	var minedBlockHeader = mineBlockHeader(newBlockHeader, "depth " + depth);
 	globalMinedBlockHeaders.push(minedBlockHeader);
-	console.log("Mined new block, depth: " + depth);
+	console.log("-----Mined new block, depth: " + depth + "-----");
 	fs.writeFileSync("./globalMinedBlockHeaders.json", JSON.stringify(globalMinedBlockHeaders));
 	fs.writeFileSync("./globalTransactionArrays.json", JSON.stringify(globalTransactionArrays));
 }

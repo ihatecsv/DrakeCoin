@@ -2,6 +2,7 @@ var crypto = require('crypto');
 var fs = require('fs');
 
 var difficulty = 5; //currently in # of zeroes
+var commonVal = "f32xa4";
 
 function compareNode(a, b) {
   if (a.getHash() < b.getHash())
@@ -99,7 +100,7 @@ class Transaction {
 
 class BlockHeader {
 	constructor(previousHash, depth, merkleRoot, timestamp){
-		this.common = "2ik9f";
+		this.common = commonVal;
 		this.previousHash = previousHash;
 		this.depth = depth;
 		this.merkleRoot = merkleRoot;
@@ -141,11 +142,11 @@ var mineBlockHeader = function(blockHeader, desc){
 	var lastTime = Math.round((new Date()).getTime() / 1000);
 	var checkTime = 1;
 	while(!found){
+		blockHeader.updateNonce(nonce);
 		var data = blockHeader.getJSON();
-		var hash = sha256(data + nonce);
+		var hash = sha256(data);
 		if(hash.substring(0,difficulty) == new Array(difficulty + 1).join("0")){
 			found = true;
-			blockHeader.updateNonce(nonce);
 			var mBH = new MinedBlockHeader(blockHeader, hash);
 			return mBH;
 		}
@@ -177,9 +178,6 @@ globalMinedBlockHeaders.push(genesisMinedBlockHeader);
 var globalTransactionArrays = [];
 
 globalTransactionArrays.push(genesisTransactions);
-
-//console.log(globalBlockHeaders);
-//console.log(globalTransactionArrays);
 
 while(true){
 	var exampleTransactions = genFakeTransactions();

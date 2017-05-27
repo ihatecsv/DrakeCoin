@@ -181,13 +181,15 @@ globalTransactionArrays.push(genesisTransactions);
 //console.log(globalBlockHeaders);
 //console.log(globalTransactionArrays);
 
-for(var i = 0; i < 100; i++){
+while(true){
 	var exampleTransactions = genFakeTransactions();
 	
 	var time = Math.round((new Date()).getTime() / 1000);
 	var awardTrans = new Transaction(null, "me, the miner", 50, time, true);
 	
 	exampleTransactions.unshift(awardTrans);
+	
+	globalTransactionArrays.push(exampleTransactions);
 	
 	var newTree = new MerkleTree();
 	newTree.genTree(exampleTransactions);

@@ -3,7 +3,7 @@ var fs = require('fs');
 
 var difficulty = 5; //currently in # of zeroes
 var commonVal = "f32xa4";
-var checkTime = 0.5; //amount of time between hashrate displays
+var checkTime = 1; //amount of time between hashrate displays
 
 function compareNode(a, b) {
   if (a.getHash() < b.getHash())

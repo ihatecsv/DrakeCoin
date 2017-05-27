@@ -1,7 +1,7 @@
 var crypto = require('crypto');
 var fs = require('fs');
 
-var difficulty = 5; //currently in # of zeroes
+var difficulty = 6; //currently in # of zeroes
 var commonVal = "f32xa4";
 var checkTime = 1; //amount of time between hashrate displays
 
@@ -154,7 +154,7 @@ var mineBlockHeader = function(blockHeader, desc){
 		hashesPerSec++;
 		var time = Math.round((new Date()).getTime() / 1000);
 		if(time - lastTime == checkTime){
-			console.log("Mining " + desc + " at " + ((hashesPerSec/checkTime)/100000).toFixed(2) + "MH/s");
+			console.log("Mining " + desc + " at " + ((hashesPerSec/checkTime)/1000000).toFixed(2) + "MH/s");
 			lastTime = time;
 			hashesPerSec = 0;
 		}

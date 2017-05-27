@@ -58,3 +58,7 @@ typings/
 
 # dotenv environment variables file
 .env
+
+# Blockchain info
+globalMinedBlockHeaders.json
+globalTransactionArrays.json

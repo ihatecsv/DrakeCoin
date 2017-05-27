@@ -3,6 +3,7 @@ var fs = require('fs');
 
 var difficulty = 5; //currently in # of zeroes
 var commonVal = "f32xa4";
+var checkTime = 0.5; //amount of time between hashrate displays
 
 function compareNode(a, b) {
   if (a.getHash() < b.getHash())
@@ -140,7 +141,6 @@ var mineBlockHeader = function(blockHeader, desc){
 	var nonce = 0;
 	var hashesPerSec = 0;
 	var lastTime = Math.round((new Date()).getTime() / 1000);
-	var checkTime = 1;
 	while(!found){
 		blockHeader.updateNonce(nonce);
 		var data = blockHeader.getJSON();

@@ -5,6 +5,8 @@ var difficulty = 6; //currently in # of zeroes
 var commonVal = "f32xa4";
 var checkTime = 1; //amount of time between hashrate displays
 
+var awardAmount = 25; //the amount to grant to the succesful miner
+
 function compareNode(a, b) {
   if (a.getHash() < b.getHash())
     return -1;
@@ -183,7 +185,7 @@ while(true){
 	var exampleTransactions = genFakeTransactions();
 	
 	var time = Math.round((new Date()).getTime() / 1000);
-	var awardTrans = new Transaction(null, "me, the miner", 50, time, true);
+	var awardTrans = new Transaction(null, "me, the miner", awardAmount, time, true);
 	
 	exampleTransactions.unshift(awardTrans);
 	

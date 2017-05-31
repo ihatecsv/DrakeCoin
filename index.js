@@ -1,13 +1,13 @@
-var crypto = require('crypto');
-var fs = require('fs');
+let crypto = require('crypto');
+let fs = require('fs');
 
-var difficulty = 6; //currently in # of zeroes
-var commonVal = "f32xa4";
-var checkTime = 1; //amount of time between hashrate displays
+const difficulty = 6; //currently in # of zeroes
+const commonVal = "f32xa4";
+const checkTime = 1; //amount of time between hashrate displays
 
-var awardAmount = 25; //the amount to grant to the succesful miner
+const awardAmount = 25; //the amount to grant to the succesful miner
 
-function compareNode(a, b) {
+const compareNode = function(a, b){
   if (a.getHash() < b.getHash())
     return -1;
   if (a.getHash() > b.getHash())
@@ -15,7 +15,7 @@ function compareNode(a, b) {
   return 0;
 }
 
-var sha256 = function(string){
+const sha256 = function(string){
 	return crypto.createHash('sha256').update(string).digest('base16').toString('hex');
 }
 
@@ -55,13 +55,13 @@ class MerkleTree {
 	}
 	genTree(transactions){
 		transactions.sort();
-		var cL = 0;
+		let cL = 0;
 		
-		var root = false;
+		let root = false;
 		
 		this.leveledHashes[cL] = [];
-		for(var i = 0; i < transactions.length; i++){ //go through each transaction,
-			var newNode = new MerkleNode(null, null, null, transactions[i]); //add each one to a new merkle node
+		for(let i = 0; i < transactions.length; i++){ //go through each transaction,
+			let newNode = new MerkleNode(null, null, null, transactions[i]); //add each one to a new merkle node
 			newNode.computeHash(); //compute the hash
 			this.leveledHashes[cL].push(newNode); //push to the current (bottom) level of the tree
 		}
@@ -128,33 +128,33 @@ class MinedBlockHeader {
 }
 
 var genFakeTransactions = function(){
-	var transactions = [];
-	var numOfTransactions = Math.floor(Math.random()*20);
-	for(var i = 0; i < numOfTransactions; i++){
-		var time = Math.round((new Date()).getTime() / 1000);
-		var trans = new Transaction(sha256(Math.random()*10000 + ""), sha256(Math.random()*10000 + ""), Math.random(), time, false);
+	let transactions = [];
+	const numOfTransactions = Math.floor(Math.random()*20);
+	for(let i = 0; i < numOfTransactions; i++){
+		const time = Math.round((new Date()).getTime() / 1000);
+		let trans = new Transaction(sha256(Math.random()*10000 + ""), sha256(Math.random()*10000 + ""), Math.random(), time, false);
 		transactions.push(trans);
 	}
 	return transactions;
 }
 
-var mineBlockHeader = function(blockHeader, desc){
-	var found = false;
-	var nonce = 0;
-	var hashesPerSec = 0;
-	var lastTime = Math.round((new Date()).getTime() / 1000);
+const mineBlockHeader = function(blockHeader, desc){
+	let found = false;
+	let nonce = 0;
+	let hashesPerSec = 0;
+	let lastTime = Math.round((new Date()).getTime() / 1000);
 	while(!found){
 		blockHeader.updateNonce(nonce);
-		var data = blockHeader.getJSON();
-		var hash = sha256(data);
+		const data = blockHeader.getJSON();
+		const hash = sha256(data);
 		if(hash.substring(0,difficulty) == new Array(difficulty + 1).join("0")){
 			found = true;
-			var mBH = new MinedBlockHeader(blockHeader, hash);
+			const mBH = new MinedBlockHeader(blockHeader, hash);
 			return mBH;
 		}
 		nonce++;
 		hashesPerSec++;
-		var time = Math.round((new Date()).getTime() / 1000);
+		const time = Math.round((new Date()).getTime() / 1000);
 		if(time - lastTime == checkTime){
 			console.log("Mining " + desc + " at " + ((hashesPerSec/checkTime)/1000000).toFixed(2) + "MH/s");
 			lastTime = time;
@@ -163,44 +163,44 @@ var mineBlockHeader = function(blockHeader, desc){
 	}
 }
 
-var preGenesisHash = "0000000000000000000000000000000000000000000000000000000000000000";
-var genesisTransactions = [new Transaction(preGenesisHash, "me, the miner", 50, 0, true)];
+const preGenesisHash = "0000000000000000000000000000000000000000000000000000000000000000";
+const genesisTransactions = [new Transaction(preGenesisHash, "me, the miner", 50, 0, true)];
 
-var genesisMerkleTree = new MerkleTree();
+const genesisMerkleTree = new MerkleTree();
 genesisMerkleTree.genTree(genesisTransactions);
 
-var genesisBlockHeader = new BlockHeader(preGenesisHash, 0, genesisMerkleTree.getMerkleRoot(), 0);
+const genesisBlockHeader = new BlockHeader(preGenesisHash, 0, genesisMerkleTree.getMerkleRoot(), 0);
 
-var genesisMinedBlockHeader = mineBlockHeader(genesisBlockHeader, "genesis hash"); //ehh
+const genesisMinedBlockHeader = mineBlockHeader(genesisBlockHeader, "genesis hash"); //ehh
 
-var globalMinedBlockHeaders = [];
+let globalMinedBlockHeaders = [];
 
 globalMinedBlockHeaders.push(genesisMinedBlockHeader);
 
-var globalTransactionArrays = [];
+let globalTransactionArrays = [];
 
 globalTransactionArrays.push(genesisTransactions);
 
 while(true){
-	var exampleTransactions = genFakeTransactions();
+	let exampleTransactions = genFakeTransactions();
 	
-	var time = Math.round((new Date()).getTime() / 1000);
-	var awardTrans = new Transaction(null, "me, the miner", awardAmount, time, true);
+	const time = Math.round((new Date()).getTime() / 1000);
+	let awardTrans = new Transaction(null, "me, the miner", awardAmount, time, true);
 	
 	exampleTransactions.unshift(awardTrans);
 	
 	globalTransactionArrays.push(exampleTransactions);
 	
-	var newTree = new MerkleTree();
+	let newTree = new MerkleTree();
 	newTree.genTree(exampleTransactions);
 	
-	var previousHash = globalMinedBlockHeaders[globalMinedBlockHeaders.length-1].hash;
+	const previousHash = globalMinedBlockHeaders[globalMinedBlockHeaders.length-1].hash;
 	
-	var depth = globalMinedBlockHeaders[globalMinedBlockHeaders.length-1].blockHeader.depth + 1;
+	const depth = globalMinedBlockHeaders[globalMinedBlockHeaders.length-1].blockHeader.depth + 1;
 	
-	var newBlockHeader = new BlockHeader(previousHash, depth, newTree.getMerkleRoot(), time);
+	let newBlockHeader = new BlockHeader(previousHash, depth, newTree.getMerkleRoot(), time);
 	
-	var minedBlockHeader = mineBlockHeader(newBlockHeader, "depth " + depth);
+	let minedBlockHeader = mineBlockHeader(newBlockHeader, "depth " + depth);
 	globalMinedBlockHeaders.push(minedBlockHeader);
 	console.log("-----Mined new block, depth: " + depth + "-----");
 	fs.writeFileSync("./globalMinedBlockHeaders.json", JSON.stringify(globalMinedBlockHeaders));

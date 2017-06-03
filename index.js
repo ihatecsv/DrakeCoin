@@ -74,7 +74,7 @@ class MerkleTree {
 			if(this.leveledHashes[cL-1].length % 2 != 0){ //if the number of hashes in the previous level is not even
 				this.leveledHashes[cL-1].push(this.leveledHashes[cL-1][this.leveledHashes[cL-1].length-1]); //duplicate the last hash
 			}
-			for(var i = 0; i < this.leveledHashes[cL-1].length; i++){ //loop through the hashes in the previous level
+			for(let i = 0; i < this.leveledHashes[cL-1].length; i++){ //loop through the hashes in the previous level
 				if(i%2 == 0){ //if the index is even
 					var newNode = new MerkleNode(null, this.leveledHashes[cL-1][i], this.leveledHashes[cL-1][i+1], null); //make a new node at the current level, with children of the two below nodes.
 					newNode.computeHash(); //compute hash from children

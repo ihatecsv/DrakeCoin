@@ -2,7 +2,7 @@ let crypto = require('crypto');
 let fs = require('fs');
 
 const difficulty = 6; //currently in # of zeroes
-const commonVal = "f32xa4";
+const magic = "f32xa4";
 const checkTime = 1; //amount of time between hashrate displays
 
 const awardAmount = 25; //the amount to grant to the succesful miner
@@ -103,7 +103,7 @@ class Transaction {
 
 class BlockHeader {
 	constructor(previousHash, depth, merkleRoot, timestamp){
-		this.common = commonVal;
+		this.common = magic;
 		this.previousHash = previousHash;
 		this.depth = depth;
 		this.merkleRoot = merkleRoot;

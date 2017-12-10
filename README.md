@@ -1,5 +1,7 @@
 # DrakeCoin
 
+![DrakeCoin](https://raw.githubusercontent.com/ihatecsv/DrakeCoin/master/drakecoin.png)
+
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/08bd440505384869b9e5bbe23137a70c)](https://www.codacy.com/app/ihatecsv/DrakeCoin?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ihatecsv/DrakeCoin&amp;utm_campaign=Badge_Grade)
 
 DrakeCoin is totally not a real cryptocurrency, and is basically just me learning about blockchains and cryptographic consensus.

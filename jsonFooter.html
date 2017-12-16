@@ -1,0 +1,25 @@
+		<script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+		<script>
+			function getSelectionText() { //Thanks https://stackoverflow.com/a/5379408
+				var text = "";
+				if (window.getSelection) {
+					text = window.getSelection().toString();
+				} else if (document.selection && document.selection.type != "Control") {
+					text = document.selection.createRange().text;
+				}
+				return text;
+			}
+			
+			$("body").click(function(){
+				$('.highlight').contents().unwrap();
+				var text = getSelectionText();
+				if(text != ""){
+					var bod = $("pre").html();
+					var regex = new RegExp(text, 'g');
+					var modBod = bod.replace(regex, "<span class='highlight'>" + text + "</span>");
+					$("pre").html(modBod);
+				}
+			}); 
+		</script>
+	</body>
+</html>

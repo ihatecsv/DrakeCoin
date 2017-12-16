@@ -1,19 +1,19 @@
 let crypto = require('crypto');
+let helpers = require('./helpers.js');
 let fs = require('fs');
 
 const difficulty = 5; //currently in # of zeroes
 const magic = "f32xa4";
 const checkTime = 1; //amount of time between hashrate displays
+
 const awardAmount = 25; //the amount to grant to the succesful miner
 
-var unconfirmedTX = [];
-
 const compareNode = function(a, b){
-	if (a.getHash() < b.getHash())
-		return -1;
-	if (a.getHash() > b.getHash())
-		return 1;
-	return 0;
+  if (a.getHash() < b.getHash())
+    return -1;
+  if (a.getHash() > b.getHash())
+    return 1;
+  return 0;
 }
 
 const sha256 = function(string){
@@ -157,7 +157,6 @@ const mineBlockHeader = function(blockHeader, desc){
 		hashesPerSec++;
 		const time = Math.round((new Date()).getTime() / 1000);
 		if(time - lastTime == checkTime){
-			process.stdout.write('\033c');
 			console.log("Mining " + desc + " at " + ((hashesPerSec/checkTime)/1000000).toFixed(2) + "MH/s");
 			lastTime = time;
 			hashesPerSec = 0;
@@ -205,6 +204,6 @@ while(true){
 	let minedBlockHeader = mineBlockHeader(newBlockHeader, "depth " + depth);
 	globalMinedBlockHeaders.push(minedBlockHeader);
 	console.log("-----Mined new block, depth: " + depth + "-----");
-	fs.writeFileSync("./globalMinedBlockHeaders.json", JSON.stringify(globalMinedBlockHeaders));
-	fs.writeFileSync("./globalTransactionArrays.json", JSON.stringify(globalTransactionArrays));
+	fs.writeFileSync("./debug/globalMinedBlockHeaders.html", helpers.makeHTML(globalMinedBlockHeaders));
+	fs.writeFileSync("./debug/globalTransactionArrays.html", helpers.makeHTML(globalTransactionArrays));
 }

@@ -12,7 +12,7 @@ var difficulty = 4; //currently in # of zeroes
 
 var unconfirmedTX = [];
 var currentBlock = {};
-var previousBlock = {eyy: "yo"};
+var previousBlock = {};
 var blockHeight = 0;
 var address = "";
 
@@ -113,7 +113,7 @@ var synch = function(){
 					break;
 				case "blockArray":
 					for(var i = 0; i < blockArray.length; i++){
-						console.log("Block array");
+						console.log("Recieved block " + i);
 					}
 					break;
 			}

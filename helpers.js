@@ -29,13 +29,24 @@ module.exports.logSolo = function(data) {
 }
 
 module.exports.makeHTML = function(obj) {
-	var beautyJSON = JSON.stringify(obj, null, 2);
 	var finalHTML = fs.readFileSync('jsonHeader.html');
-	finalHTML += "<pre>" + syntaxHighlight(beautyJSON) + "</pre>";
+	finalHTML += "<pre>" + syntaxHighlight(obj) + "</pre>";
 	finalHTML += fs.readFileSync('jsonFooter.html');
 	return finalHTML;
 }
 
 module.exports.sha256 = function(string){
-	return crypto.createHash('sha256').update(string).digest('base16').toString('hex');
+	return crypto.createHash('sha256').update(string).digest().toString('hex');
+}
+
+module.exports.makeExpandedBlocksCopy = function(blocks){
+	var copiedBlocks = JSON.parse(JSON.stringify(blocks));
+	var expandedBlocks = copiedBlocks.map(function(x){
+		x.nonce = parseInt(x.data.substr(x.data.lastIndexOf("}")+1));
+		x.data = x.data.substr(0, x.data.lastIndexOf("}")+1);
+		x.block = JSON.parse(x.data);
+		delete x.data;
+		return x;
+	});
+	return expandedBlocks;
 }

@@ -4,19 +4,26 @@
 
 int main()
 {
+    char converted[32*2 + 1];
+    int nonce = 0;
     int i;
-    for(i=0;i<2;i++){
-        const unsigned char* t = "Drake";
 
-        unsigned char hash1[32];
-        sha256(t, 5, hash1);
-        char converted[32*2 + 1];
+    unsigned char t[100];
+    unsigned char hash[32];
+    for(;;){
+        sprintf(t, "%s%d", "Drake", nonce);
 
-        int j;
-        for(j=0;j<32;j++) {
-            sprintf(&converted[j*2], "%02X", hash1[j]);
+        sha256(t, strlen(t), hash);
+        if(hash[0] == 0x00 && hash[1] == 0x00 && hash[2] == 0x00){
+            int j;
+            for(j=0;j<32;j++) {
+                sprintf(&converted[j*2], "%02X", hash[j]);
+            }
+            printf("%s\n", converted);
+            printf("%s\n", t);
+            break;
         }
-        printf("%s\n", converted);
+        nonce++;
     }
     return 0;
 }

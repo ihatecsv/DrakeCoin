@@ -34,6 +34,10 @@
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="sha2.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sha2.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />

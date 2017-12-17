@@ -8,16 +8,7 @@ var difficulty = 5; //currently in # of zeroes
 const checkTime = 1; //amount of time between hashrate displays
 
 var port = 43329;
-var fakeBlocks = 20;
-
-exec('DCSHA256/bin/Debug/DCSHA256.exe', function(err, data) {  
-	console.log(err);
-	console.log(data.toString());                       
-});
-
-var client = new net.Socket();
-client.connect(5556, '127.0.0.1', function() {
-});
+var fakeBlocks = 5;
 
 var blocks = [
 	{
@@ -122,22 +113,20 @@ var mine = function(block){
 	normalize(block);
 	const data = blocks[block].data;
 	currentBlock = block;
-	client.write(data);
+	exec('DCSHA256/bin/Debug/DCSHA256.exe', [data], function(err, nonce) {
+		console.log(parseInt(nonce.toString()));
+		blocks[currentBlock].data += parseInt(nonce);
+		blocks[currentBlock].hash = helpers.sha256(blocks[currentBlock].data);
+		console.log("Current block: " + currentBlock);
+		console.log("Blocks length: " + blocks.length);
+		if(currentBlock < blocks.length-1){
+			blocks[currentBlock+1].block.previousHash = blocks[currentBlock].hash;
+			mine(currentBlock+1);
+		}else{
+			doneMining();
+		}                       
+	});
 }
-
-client.on('data', function(nonce) {
-	console.log(parseInt(nonce.toString()));
-	blocks[currentBlock].data += parseInt(nonce);
-	blocks[currentBlock].hash = helpers.sha256(blocks[currentBlock].data);
-	console.log("Current block: " + currentBlock);
-	console.log("Blocks length: " + blocks.length);
-	if(currentBlock < blocks.length-1){
-		blocks[currentBlock+1].block.previousHash = blocks[currentBlock].hash;
-		mine(currentBlock+1);
-	}else{
-		doneMining();
-	}
-});
 
 var genFakeTransactions = function(){
 	var transactions = [];

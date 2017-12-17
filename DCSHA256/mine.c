@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "sha2.h"
 
-int mine(char data[])
+int main(int argc, char *argv[])
 {
     char converted[32*2 + 1];
     int nonce = 0;
@@ -10,19 +10,18 @@ int mine(char data[])
     unsigned char t[1024];
     unsigned char hash[32];
     for(;;){
-        sprintf(t, "%s%d", data, nonce);
+        sprintf(t, "%s%d", argv[1], nonce);
 
         sha256(t, strlen(t), hash);
-        if(hash[0] == 0x00 && hash[1] == 0x00 && hash[2] == 0x00){
+        if(hash[0] == 0x00 && hash[1] == 0x00){
             int j;
             for(j=0;j<32;j++) {
                 sprintf(&converted[j*2], "%02X", hash[j]);
             }
-            printf("%s\n", converted);
-            printf("%s\n", t);
+            printf("%d\n", nonce);
             break;
         }
         nonce++;
     }
-    return nonce;
+    return 0;
 }

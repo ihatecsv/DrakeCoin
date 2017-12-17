@@ -44,7 +44,7 @@ module.exports.makeExpandedBlocksCopy = function(blocks){
 	var expandedBlocks = copiedBlocks.map(function(x){
 		x.nonce = parseInt(x.data.substr(x.data.lastIndexOf("}")+1));
 		x.data = x.data.substr(0, x.data.lastIndexOf("}")+1);
-		x.block = JSON.parse(x.data);
+		x.hashedData = JSON.parse(x.data);
 		delete x.data;
 		return x;
 	});

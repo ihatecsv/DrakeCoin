@@ -4,27 +4,28 @@ const keygen = require('./keygen.js');
 const fs = require('fs');
 const exec = require('child_process').execFile;
 
-var difficulty = 5; //currently in # of zeroes
+const target = "0000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
 const checkTime = 1; //amount of time between hashrate displays
 
 var port = 43329;
-var fakeBlocks = 5;
+var fakeBlocks = 32;
+var fakeTransactions = 32;
 
 var blocks = [
 	{
 		hash: "",
-		block: {
+		transactions: [
+			{
+				reciever: "DL9fSHaRHYhLw5kiYNMDU9wJaPVKxSM4KT",
+				amount: 25000000	,
+				timestamp: 1513445082,
+				sig: "aaa"
+			}
+		],
+		hashedData: {
 			previousHash: "0000000000000000000000000000000000000000000000000000000000000000",
 			height: 1,
 			timestamp: 1513445082,
-			transactions: [
-				{
-					reciever: "DL9fSHaRHYhLw5kiYNMDU9wJaPVKxSM4KT",
-					amount: 25000000	,
-					timestamp: 1513445082,
-					sig: "aaa"
-				}
-			],
 			merkleRoot: ""
 		}
 	}
@@ -66,7 +67,7 @@ const compareNode = function(a, b){
 
 var genTree = function(block){
 	var leveledHashes = [];
-	var transactions = blocks[block].block.transactions;
+	var transactions = blocks[block].transactions;
 	transactions.sort();
 	let cL = 0;
 	
@@ -96,31 +97,30 @@ var genTree = function(block){
 		}
 		if(leveledHashes[cL].length == 1){
 			root = true;
-			blocks[block].block.merkleRoot = leveledHashes[cL][0].getHash();
+			blocks[block].hashedData.merkleRoot = leveledHashes[cL][0].getHash();
 		}
 	}
 }
 
 var normalize = function(block){
-	blocks[block].data = JSON.stringify(blocks[block].block);
-	delete blocks[block].block;
+	blocks[block].data = JSON.stringify(blocks[block].hashedData);
+	delete blocks[block].hashedData;
 }
 
 var currentBlock;
 
 var mine = function(block){
+	console.log("Mining block " + block);
 	genTree(block);
 	normalize(block);
 	const data = blocks[block].data;
 	currentBlock = block;
-	exec('DCSHA256/bin/Debug/DCSHA256.exe', [data], function(err, nonce) {
+	exec('DCSHA256/bin/Debug/DCSHA256.exe', [target, data], function(err, nonce) {
 		console.log(parseInt(nonce.toString()));
 		blocks[currentBlock].data += parseInt(nonce);
 		blocks[currentBlock].hash = helpers.sha256(blocks[currentBlock].data);
-		console.log("Current block: " + currentBlock);
-		console.log("Blocks length: " + blocks.length);
 		if(currentBlock < blocks.length-1){
-			blocks[currentBlock+1].block.previousHash = blocks[currentBlock].hash;
+			blocks[currentBlock+1].hashedData.previousHash = blocks[currentBlock].hash;
 			mine(currentBlock+1);
 		}else{
 			doneMining();
@@ -130,7 +130,7 @@ var mine = function(block){
 
 var genFakeTransactions = function(){
 	var transactions = [];
-	var numOfTransactions = Math.floor(Math.random()*5);
+	var numOfTransactions = Math.floor(Math.random()*fakeTransactions);
 	var miner = keygen.genPair().address;
 	transactions.push( //Miner gotta get paid!
 		{
@@ -158,11 +158,11 @@ while(fakeBlocks != 0){
 	var time = Math.round((new Date()).getTime() / 1000);
 	blocks.push({
 		hash: "",
-		block: {
+		transactions: genFakeTransactions(),
+		hashedData: {
 			previousHash: blocks[blocks.length-1].hash,
 			height: blocks.length,
 			timestamp: time,
-			transactions: genFakeTransactions(),
 			merkleRoot: ""
 		}
 	});

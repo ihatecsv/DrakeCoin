@@ -6,8 +6,23 @@
 1513461111 c:\users\drake\desktop\drakecoin\dcsha256\sha2.h
 	<stdint.h>
 
-1513470367 source:c:\users\drake\desktop\drakecoin\dcsha256\main.c
+1513470581 source:c:\users\drake\desktop\drakecoin\dcsha256\main.c
 	<stdio.h>
 	<stdlib.h>
 	"sha2.h"
+
+1513475843 source:c:\users\drake\desktop\drakecoin\dcsha256\mine.c
+	<stdio.h>
+	<stdlib.h>
+	"sha2.h"
+
+1513475987 source:c:\users\drake\desktop\drakecoin\dcsha256\tcpserver.c
+	<windows.h>
+	<winsock2.h>
+	<ws2tcpip.h>
+	<stdlib.h>
+	<stdio.h>
+	"mine.h"
+
+1513475848 c:\users\drake\desktop\drakecoin\dcsha256\mine.h
 

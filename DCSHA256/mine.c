@@ -2,16 +2,15 @@
 #include <stdlib.h>
 #include "sha2.h"
 
-int main()
+int mine(char data[])
 {
     char converted[32*2 + 1];
     int nonce = 0;
-    int i;
 
-    unsigned char t[100];
+    unsigned char t[1024];
     unsigned char hash[32];
     for(;;){
-        sprintf(t, "%s%d", "Drake", nonce);
+        sprintf(t, "%s%d", data, nonce);
 
         sha256(t, strlen(t), hash);
         if(hash[0] == 0x00 && hash[1] == 0x00 && hash[2] == 0x00){
@@ -25,5 +24,5 @@ int main()
         }
         nonce++;
     }
-    return 0;
+    return nonce;
 }

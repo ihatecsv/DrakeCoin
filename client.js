@@ -94,7 +94,7 @@ var clientReady = function(){
 var synch = function(){
 	var client = new net.Socket();
 		
-	client.connect(5000, '127.0.0.1', function() {
+	client.connect(5555, '127.0.0.1', function() {
 		var request = {type: "blockHeightRequest"};
 		client.write(JSON.stringify(request));
 	});

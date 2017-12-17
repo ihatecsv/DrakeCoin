@@ -2,12 +2,22 @@ const net = require('net');
 const helpers = require('./helpers.js');
 const keygen = require('./keygen.js');
 const fs = require('fs');
+const exec = require('child_process').execFile;
 
 var difficulty = 5; //currently in # of zeroes
 const checkTime = 1; //amount of time between hashrate displays
 
-var port = 5000;
-var fakeBlocks = 5;
+var port = 43329;
+var fakeBlocks = 20;
+
+exec('DCSHA256/bin/Debug/DCSHA256.exe', function(err, data) {  
+	console.log(err);
+	console.log(data.toString());                       
+});
+
+var client = new net.Socket();
+client.connect(5556, '127.0.0.1', function() {
+});
 
 var blocks = [
 	{
@@ -105,30 +115,29 @@ var normalize = function(block){
 	delete blocks[block].block;
 }
 
+var currentBlock;
+
 var mine = function(block){
-	let found = false;
-	let nonce = 0;
-	let hashesPerSec = 0;
-	let lastTime = Math.round((new Date()).getTime() / 1000);
+	genTree(block);
+	normalize(block);
 	const data = blocks[block].data;
-	while(!found){
-		const hash = helpers.sha256(data+nonce);
-		if(hash.substring(0,difficulty) == new Array(difficulty + 1).join("0")){
-			found = true;
-			blocks[block].hash = hash;
-			blocks[block].data += nonce;
-			return;
-		}
-		nonce++;
-		hashesPerSec++;
-		const time = Math.round((new Date()).getTime() / 1000);
-		if(time - lastTime == checkTime){
-			console.log("Mining " + block + " at " + ((hashesPerSec/checkTime)/1000000).toFixed(2) + "MH/s");
-			lastTime = time;
-			hashesPerSec = 0;
-		}
-	}
+	currentBlock = block;
+	client.write(data);
 }
+
+client.on('data', function(nonce) {
+	console.log(parseInt(nonce.toString()));
+	blocks[currentBlock].data += parseInt(nonce);
+	blocks[currentBlock].hash = helpers.sha256(blocks[currentBlock].data);
+	console.log("Current block: " + currentBlock);
+	console.log("Blocks length: " + blocks.length);
+	if(currentBlock < blocks.length-1){
+		blocks[currentBlock+1].block.previousHash = blocks[currentBlock].hash;
+		mine(currentBlock+1);
+	}else{
+		doneMining();
+	}
+});
 
 var genFakeTransactions = function(){
 	var transactions = [];
@@ -156,10 +165,6 @@ var genFakeTransactions = function(){
 	return transactions;
 }
 
-genTree(0);
-normalize(0);
-mine(0);
-
 while(fakeBlocks != 0){
 	var time = Math.round((new Date()).getTime() / 1000);
 	blocks.push({
@@ -172,53 +177,54 @@ while(fakeBlocks != 0){
 			merkleRoot: ""
 		}
 	});
-	genTree(blocks.length-1);
-	normalize(blocks.length-1);
-	mine(blocks.length-1);
 	fakeBlocks--;
 }
 
-console.log("Starting server!");
+mine(0);
 
-var expandedBlocks = helpers.makeExpandedBlocksCopy(blocks);
-fs.writeFileSync("./debug/testBlocksExpanded.html", helpers.makeHTML(expandedBlocks));
-fs.writeFileSync("./debug/testBlocks.html", helpers.makeHTML(blocks));
-
-var server = net.createServer(function(socket) {
-	socket.pipe(socket);
-	socket.on('data', function(data) {
-		try{
-			pData = JSON.parse(data.toString());
-			console.log("------------------RECV: " + pData.type);
-			console.log(pData);
-			console.log("/-----------------RECV");
-			var response = {};
-			switch(pData.type){
-				case "blockHeightRequest":
-					response = {type: "blockHeight", blockHeight: blocks.length};
-					break;
-				case "blockRequest":
-					var blockArray = [];
-					for(var i = parseInt(pData.height); i < blocks.length; i++){
-						blockArray.push(blocks[i]);
-					}
-					response = {type: "blockArray", blockArray: blockArray};
-					break;
-				default:
-					response = {type: "unknownRequest"}
-					break;
-			}
-			
-			socket.write(JSON.stringify(response));
-			console.log("------------------SEND: " + response.type);
-			console.log(JSON.stringify(response));
-			console.log("/-----------------SEND");
-		}catch(e){
-		}
-	});
+var doneMining = function(){
+	console.log("Starting server!");
 	
-	socket.on('error', function(err) {
-		return;
+	var expandedBlocks = helpers.makeExpandedBlocksCopy(blocks);
+	fs.writeFileSync("./debug/testBlocksExpanded.html", helpers.makeHTML(expandedBlocks));
+	fs.writeFileSync("./debug/testBlocks.html", helpers.makeHTML(blocks));
+
+	var server = net.createServer(function(socket) {
+		socket.pipe(socket);
+		socket.on('data', function(data) {
+			try{
+				pData = JSON.parse(data.toString());
+				console.log("------------------RECV: " + pData.type);
+				console.log(pData);
+				console.log("/-----------------RECV");
+				var response = {};
+				switch(pData.type){
+					case "blockHeightRequest":
+						response = {type: "blockHeight", blockHeight: blocks.length};
+						break;
+					case "blockRequest":
+						var blockArray = [];
+						for(var i = parseInt(pData.height); i < blocks.length; i++){
+							blockArray.push(blocks[i]);
+						}
+						response = {type: "blockArray", blockArray: blockArray};
+						break;
+					default:
+						response = {type: "unknownRequest"}
+						break;
+				}
+				
+				socket.write(JSON.stringify(response));
+				console.log("------------------SEND: " + response.type);
+				console.log(JSON.stringify(response));
+				console.log("/-----------------SEND");
+			}catch(e){
+			}
+		});
+		
+		socket.on('error', function(err) {
+			return;
+		});
 	});
-});
-server.listen(port, '127.0.0.1');
+	server.listen(5124, '127.0.0.1');
+}

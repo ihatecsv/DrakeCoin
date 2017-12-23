@@ -152,12 +152,14 @@ var mine = function(block){
 	normalize(block);
 	const data = blocks[block].data;
 	currentBlock = block;
+	process.stdout.write(chalk.blue("Mining block..."));
 	exec('DCSHA256/bin/Release/DCSHA256.exe', [target, data], function(err, nonce) {
 		lastNonce = parseInt(nonce);
 		blocks[currentBlock].data += parseInt(nonce);
 		blocks[currentBlock].hash = helpers.sha256(blocks[currentBlock].data);
 		
 		var now = new Date().getTime();
+		process.stdout.write("\r\x1b[K"); //clear "mining block" message
 		console.log(chalk.blue("Block mined!\n"));
 		console.log("Rate:  " + ((lastNonce/((now-prevTime)/1000))/1000000).toFixed(2) + chalk.gray(" MH/s"));
 		console.log("Diff:  " + difficulty);

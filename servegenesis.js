@@ -114,7 +114,7 @@ var genTree = function(block){
 		}
 		var spaceCount = merkleTreeHashDispLength-(index.toString().length-1);
 		var spaceString = " ".repeat(spaceCount);
-		process.stdout.write(index + spaceString);
+		process.stdout.write(chalk.gray(index + spaceString));
 	}
 	process.stdout.write("\n");
 	

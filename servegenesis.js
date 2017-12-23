@@ -5,14 +5,17 @@ const keygen = require('./keygen.js');
 const fs = require('fs');
 const exec = require('child_process').execFile;
 
-const difficulty = 5;
+const difficulty = 4;
 const target = "0".repeat(difficulty) + "f".repeat(64-difficulty);
 
 const checkTime = 1; //amount of time between hashrate displays
 
+const merkleTreeHashDispLength = 4;
+const indexMerkleTreeHashOne = true;
+
 var port = 43329;
-var fakeBlocks = 3;
-var fakeTransactions = 40;
+var fakeBlocks = 16;
+var fakeTransactions = 32;
 
 var blocks = [
 	{
@@ -103,14 +106,28 @@ var genTree = function(block){
 			blocks[block].hashedData.merkleRoot = leveledHashes[cL][0].getHash();
 		}
 	}
+	process.stdout.write(" ".repeat(4));
+	for(var i = 0; i < leveledHashes[0].length; i++){
+		var index = i;
+		if(indexMerkleTreeHashOne){ //let's make this ez
+			index++;
+		}
+		var spaceCount = merkleTreeHashDispLength-(index.toString().length-1);
+		var spaceString = " ".repeat(spaceCount);
+		process.stdout.write(index + spaceString);
+	}
+	process.stdout.write("\n");
+	
 	for(var i = 0; i < leveledHashes.length; i++){ //print tree
 		var lastHash = "";
+		process.stdout.write("L" + i + ": ");
 		for(var j = 0; j < leveledHashes[i].length; j++){
-			var curHash = leveledHashes[i][j].getHash().substring(0, 2) + " ";
-			if(curHash == lastHash && j == leveledHashes[i].length-1){
-				process.stdout.write(chalk.cyan(curHash));
+			var curHash = leveledHashes[i][j].getHash();
+			var curHashReady = curHash.substring(0, merkleTreeHashDispLength) + " ";
+			if(curHash == lastHash){
+				process.stdout.write(chalk.cyan(curHashReady));
 			}else{
-				process.stdout.write(curHash);
+				process.stdout.write(curHashReady);
 			}
 			lastHash = curHash;
 		}

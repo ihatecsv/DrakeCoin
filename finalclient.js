@@ -13,29 +13,11 @@ const checkTime = 1; //amount of time between hashrate displays
 const merkleTreeHashDispLength = 4;
 const indexMerkleTreeHashOne = true;
 
-var port = 43330;
-var fakeBlocks = 3;
-var fakeTransactions = 32;
+var clientPort = 43329;
+var serverPort = 43330;
 
-var blocks = [
-	{
-		hash: "",
-		transactions: [
-			{
-				reciever: "DL9fSHaRHYhLw5kiYNMDU9wJaPVKxSM4KT",
-				amount: 25000000	,
-				timestamp: 1513445082,
-				sig: "aaa"
-			}
-		],
-		hashedData: {
-			previousHash: "0000000000000000000000000000000000000000000000000000000000000000",
-			height: 1,
-			timestamp: 1513445082,
-			merkleRoot: ""
-		}
-	}
-];
+var blocks = [];
+var blockHeight = 0;
 
 class MerkleNode {
 	constructor(parentNode, childNode0, childNode1, transaction) {
@@ -176,49 +158,14 @@ var mine = function(block){
 	});
 }
 
-var genFakeTransactions = function(){
-	var transactions = [];
-	var numOfTransactions = Math.floor(Math.random()*fakeTransactions);
-	var miner = keygen.genPair().address;
-	transactions.push( //Miner gotta get paid!
-		{
-			reciever: keygen.genPair().address,
-			amount: 25000000,
-			timestamp: time,
-			sig: "aaa"
-		}
-	);
-	for(let i = 0; i < numOfTransactions; i++){
-		var time = Math.round((new Date()).getTime() / 1000);
-		var trans = {
-			reciever: keygen.genPair().address,
-			amount: Math.ceil(Math.random()*1000000),
-			timestamp: time,
-			prevOut: "someid",
-			sig: "aaa"
-		};
-		transactions.push(trans);
+var verifyBlock = function(block){ //expand, of course
+	var checkHash = helpers.sha256(block.data);
+	var blockHash = block.hash;
+	if(checkHash == blockHash){
+		return true;
 	}
-	return transactions;
+	return false;
 }
-
-while(fakeBlocks != 0){
-	var time = Math.round((new Date()).getTime() / 1000);
-	blocks.push({
-		hash: "",
-		transactions: genFakeTransactions(),
-		hashedData: {
-			previousHash: blocks[blocks.length-1].hash,
-			height: blocks.length,
-			timestamp: time,
-			merkleRoot: ""
-		}
-	});
-	fakeBlocks--;
-}
-
-helpers.logSolo("DrakeCoin serve-genesis initialization...\n");
-mine(0);
 
 var doneMining = function(){
 	console.log("Starting server!");
@@ -264,5 +211,45 @@ var doneMining = function(){
 			return;
 		});
 	});
-	server.listen(5555, '127.0.0.1');
+	//server.listen(serverPort, '127.0.0.1');
+	
+	synch();
 }
+
+var synch = function(){
+	var client = new net.Socket();
+		
+	client.connect(5555, '127.0.0.1', function() {
+		var request = {type: "blockHeightRequest"};
+		client.write(JSON.stringify(request));
+	});
+
+	client.on('data', function(data) {
+		try{
+			var pData = JSON.parse(data.toString());
+			switch(pData.type){
+				case "blockHeight":
+					console.log("Current block height: " + blockHeight);
+					console.log("Remote block height: " + pData.blockHeight);
+					if(blockHeight < pData.blockHeight){
+						var request = {type: "blockRequest", height: blockHeight};
+						client.write(JSON.stringify(request));
+					}
+					break;
+				case "blockArray":
+					for(var i = 0; i < pData.blockArray.length; i++){
+						console.log(verifyBlock(pData.blockArray[i]));
+					}
+					break;
+			}
+		}catch(e){
+		}
+	});
+
+	client.on('close', function() {
+		console.log('Connection closed');
+	});
+}
+
+helpers.logSolo("DrakeCoin client initialization...\n");
+doneMining();

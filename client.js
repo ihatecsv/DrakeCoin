@@ -5,6 +5,7 @@ const helpers = require('./helpers.js');
 
 //---------------
 var port = 43329;
+var servPort = 43330;
 var neighbors = [];
 var mine = true;
 var difficulty = 4; //currently in # of zeroes
@@ -94,7 +95,7 @@ var clientReady = function(){
 var synch = function(){
 	var client = new net.Socket();
 		
-	client.connect(5555, '127.0.0.1', function() {
+	client.connect(servPort, '127.0.0.1', function() {
 		var request = {type: "blockHeightRequest"};
 		client.write(JSON.stringify(request));
 	});
@@ -112,8 +113,9 @@ var synch = function(){
 					}
 					break;
 				case "blockArray":
-					for(var i = 0; i < blockArray.length; i++){
-						console.log("Recieved block " + i);
+					console.log(pData.blockArray[0]);
+					for(var i = 0; i < pData.blockArray.length; i++){
+						//console.log(pData.blockArray[i]);
 					}
 					break;
 			}

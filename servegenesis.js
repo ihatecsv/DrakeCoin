@@ -5,7 +5,7 @@ const keygen = require('./keygen.js');
 const fs = require('fs');
 const exec = require('child_process').execFile;
 
-const difficulty = 4;
+const difficulty = 5;
 const target = "0".repeat(difficulty) + "f".repeat(64-difficulty);
 
 const checkTime = 1; //amount of time between hashrate displays
@@ -14,7 +14,7 @@ const merkleTreeHashDispLength = 4;
 const indexMerkleTreeHashOne = true;
 
 var port = 43329;
-var fakeBlocks = 16;
+var fakeBlocks = 2;
 var fakeTransactions = 32;
 
 var blocks = [
@@ -157,9 +157,12 @@ var mine = function(block){
 		blocks[currentBlock].data += parseInt(nonce);
 		blocks[currentBlock].hash = helpers.sha256(blocks[currentBlock].data);
 		
-		
 		var now = new Date().getTime();
-		console.log("Mined block " + currentBlock + " at " + ((lastNonce/((now-prevTime)/1000))/1000000).toFixed(2) + " MH/s (Nonce: " + lastNonce + ")");
+		console.log(chalk.blue("Block mined!\n"));
+		console.log("Rate:  " + ((lastNonce/((now-prevTime)/1000))/1000000).toFixed(2) + chalk.gray(" MH/s"));
+		console.log("Diff:  " + difficulty);
+		console.log("Nonce: " + lastNonce);
+		console.log("Hash:  " + blocks[currentBlock].hash);
 		console.log(chalk.red("--------------------------------/ " + currentBlock + " /--------------------------------\n"));
 		
 		if(currentBlock < blocks.length-1){
@@ -212,6 +215,7 @@ while(fakeBlocks != 0){
 	fakeBlocks--;
 }
 
+helpers.logSolo("DrakeCoin serve-genesis initialization...\n");
 mine(0);
 
 var doneMining = function(){

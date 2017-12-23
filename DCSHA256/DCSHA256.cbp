@@ -42,9 +42,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="sha2.h" />
-		<Unit filename="tcpserver.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Extensions>
 			<code_completion />
 			<envvars />

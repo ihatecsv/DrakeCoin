@@ -21,6 +21,7 @@
   "homepage": "https://github.com/ihatecsv/DrakeCoin#readme",
   "dependencies": {
     "big-integer": "^1.6.26",
+    "chalk": "^2.3.0",
     "level": "^2.1.1",
     "ripemd160": "^2.0.1"
   }

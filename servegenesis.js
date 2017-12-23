@@ -1,15 +1,18 @@
 const net = require('net');
+const chalk = require('chalk');
 const helpers = require('./helpers.js');
 const keygen = require('./keygen.js');
 const fs = require('fs');
 const exec = require('child_process').execFile;
 
-const target = "0000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+const difficulty = 5;
+const target = "0".repeat(difficulty) + "f".repeat(64-difficulty);
+
 const checkTime = 1; //amount of time between hashrate displays
 
 var port = 43329;
-var fakeBlocks = 32;
-var fakeTransactions = 32;
+var fakeBlocks = 3;
+var fakeTransactions = 40;
 
 var blocks = [
 	{
@@ -100,6 +103,20 @@ var genTree = function(block){
 			blocks[block].hashedData.merkleRoot = leveledHashes[cL][0].getHash();
 		}
 	}
+	for(var i = 0; i < leveledHashes.length; i++){ //print tree
+		var lastHash = "";
+		for(var j = 0; j < leveledHashes[i].length; j++){
+			var curHash = leveledHashes[i][j].getHash().substring(0, 2) + " ";
+			if(curHash == lastHash && j == leveledHashes[i].length-1){
+				process.stdout.write(chalk.cyan(curHash));
+			}else{
+				process.stdout.write(curHash);
+			}
+			lastHash = curHash;
+		}
+		process.stdout.write("\n");
+	}
+	process.stdout.write("\n");
 }
 
 var normalize = function(block){
@@ -108,23 +125,32 @@ var normalize = function(block){
 }
 
 var currentBlock;
+var prevTime;
+var lastNonce;
 
 var mine = function(block){
-	console.log("Mining block " + block);
+	console.log(chalk.red("--------------------------------# " + block + " #--------------------------------"));
+	prevTime = new Date().getTime();
 	genTree(block);
 	normalize(block);
 	const data = blocks[block].data;
 	currentBlock = block;
-	exec('DCSHA256/bin/Debug/DCSHA256.exe', [target, data], function(err, nonce) {
-		console.log(parseInt(nonce.toString()));
+	exec('DCSHA256/bin/Release/DCSHA256.exe', [target, data], function(err, nonce) {
+		lastNonce = parseInt(nonce);
 		blocks[currentBlock].data += parseInt(nonce);
 		blocks[currentBlock].hash = helpers.sha256(blocks[currentBlock].data);
+		
+		
+		var now = new Date().getTime();
+		console.log("Mined block " + currentBlock + " at " + ((lastNonce/((now-prevTime)/1000))/1000000).toFixed(2) + " MH/s (Nonce: " + lastNonce + ")");
+		console.log(chalk.red("--------------------------------/ " + currentBlock + " /--------------------------------\n"));
+		
 		if(currentBlock < blocks.length-1){
 			blocks[currentBlock+1].hashedData.previousHash = blocks[currentBlock].hash;
 			mine(currentBlock+1);
 		}else{
 			doneMining();
-		}                       
+		}        		
 	});
 }
 

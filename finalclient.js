@@ -21,10 +21,11 @@ var serverVerbose = false;
 var clientVerbose = false;
 
 var neighborPort = parseInt(process.argv[3]);
+var neighborAddress = parseInt(process.argv[4]);
 
 var blocks = [];
 
-var neighbors = [{port: neighborPort, address: "127.0.0.1"}];
+var neighbors = [{port: neighborPort, address: neighborAddress}];
 var unconfirmedTX = [];
 var blockHeight = "EMPTY";
 var address = "";
@@ -326,7 +327,7 @@ var startUp = function(){
 			return;
 		});
 	});
-	server.listen(serverPort, '127.0.0.1');
+	server.listen(serverPort);
 	
 	synch();
 }

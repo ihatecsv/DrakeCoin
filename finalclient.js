@@ -343,7 +343,9 @@ var startUp = function(){
 
 var synch = function(){
 	var client = new net.Socket();
-		
+	if(clientVerbose){
+		console.log("Connecting to " + neighbors[0].address + ":" + neighbors[0].port);
+	}
 	client.connect(neighbors[0].port, neighbors[0].address, function() {
 		var request = {type: "blockHeightRequest"};
 		client.write(JSON.stringify(request));

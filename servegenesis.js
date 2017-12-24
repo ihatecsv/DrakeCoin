@@ -154,12 +154,19 @@ var mine = function(block){
 	process.stdout.write(chalk.blue("Mining block..."));
 	var minerParams = [];
 	var minerLoc = "";
-	if(process.platform == "win32"){
-		var minerParams = [target, data];
-		var minerLoc = "DCSHA256/bin/Release/DCSHA256.exe";
-	}else{
-		var minerParams = ["jsminer.js", target, data];
-		var minerLoc = "node";
+	switch(process.platform){
+		case "win32":
+			minerParams = [target, data];
+			minerLoc = "DCSHA256/bin/Release/DCSHA256.exe";
+			break;
+		case "linux":
+			minerParams = [target, data];
+			minerLoc = "DCSHA256/bin/Release/DCSHA256";
+			break;
+		default:
+			minerParams = ["jsminer.js", target, data];
+			minerLoc = "node";
+			break;
 	}
 	miningProc = exec(minerLoc, minerParams, function(err, nonce) {
 		lastNonce = parseInt(nonce);

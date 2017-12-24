@@ -309,7 +309,7 @@ var startUp = function(){
 							console.log("Diff:  " + difficulty);
 							console.log("Nonce: " + expandedNewBlock.nonce);
 							console.log("Hash:  " + expandedNewBlock.hash);
-							console.log(chalk.green("--------------------------------/ " + currentBlockHeight + " /--------------------------------\n"));
+							console.log(chalk.green("--------------------------------/ " + expandedNewBlock.hashedData.height + " /--------------------------------\n"));
 							
 							mine(makeFakeBlock());
 							response = {type: "blockReceipt", stat: true};

@@ -353,6 +353,7 @@ const startServer = function(){
 		});
 		
 		socket.on('error', function(err) {
+			console.log(chalk.red("SERVER ERROR"));
 			return;
 		});
 	});
@@ -418,6 +419,7 @@ const synch = function(){
 }
 
 const clientReady = function(){
+	console.log(chalk.green("SYNCH COMPLETE"));
 	startServer();
 	mine(makeFakeBlock());
 }
@@ -437,6 +439,7 @@ const broadcastBlock = function(block, height){
 	for(let i = 0; i < neighbors.length; i++){
 		client.connect(neighbors[i].port, neighbors[i].address, function() {
 			const request = {type: "minedBlock", block: block, height: height};
+			console.log(chalk.cyan("Sending block " + height + " to " + neighbors[i].address + ":" + neighbors[i].port));
 			client.write(JSON.stringify(request));
 			client.destroy();
 		});

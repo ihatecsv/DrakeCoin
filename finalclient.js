@@ -16,7 +16,11 @@ if(fs.existsSync("config.json")){
 	return;
 }
 
-const clientIdentifier = config.clientIdentifier;
+let clientIdentifier = config.clientIdentifier;
+if(randomClientIdentifier){
+	clientIdentifier = Math.floor(Math.random()*10000);
+}
+
 const serverPort = config.serverPort;
 const neighbors = config.neighbors;
 const difficulty = config.difficulty;

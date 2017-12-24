@@ -14,33 +14,33 @@ const checkTime = 1; //amount of time between hashrate displays
 const merkleTreeHashDispLength = 4;
 const indexMerkleTreeHashOne = true;
 
-var fakeTransactions = 16;
+const fakeTransactions = 16;
 
-var serverPort = parseInt(process.argv[3]);
-var serverVerbose = false;
-var clientVerbose = false;
+const serverPort = parseInt(process.argv[3]);
+const serverVerbose = false;
+const clientVerbose = false;
 
-var neighborPort = parseInt(process.argv[4]);
-var neighborAddress = process.argv[5];
+const neighborPort = parseInt(process.argv[4]);
+const neighborAddress = process.argv[5];
 
-var blocks = [];
+const neighbors = [{port: neighborPort, address: neighborAddress}];
 
-var neighbors = [{port: neighborPort, address: neighborAddress}];
-var unconfirmedTX = [];
-var blockHeight = "EMPTY";
-var address = "";
+const UTXODB = level('./DB/UTXODB' + serverPort);
+const BLOCKDB = level('./DB/BLOCKDB' + serverPort);
+const CLIENTDB = level('./DB/CLIENTDB' + serverPort);
 
-var UTXODB = level('./DB/UTXODB' + serverPort);
-var BLOCKDB = level('./DB/BLOCKDB' + serverPort);
-var CLIENTDB = level('./DB/CLIENTDB' + serverPort);
+let blocks = [];
+let unconfirmedTX = [];
+let blockHeight = "EMPTY";
+let address = "";
 
-var server = null;
-var miningProc = null;
+let server = null;
+let miningProc = null;
 
 CLIENTDB.get('address', function (err, value) {
 	if(err && err.type == 'NotFoundError'){
 		console.log("Generating new address!");
-		var keypair = keygen.genPair();
+		const keypair = keygen.genPair();
 		CLIENTDB.put('address', keypair.address, function (err) {
 			if (err) return console.log('Ooops!', err);
 		});
@@ -98,12 +98,12 @@ const compareNode = function(a, b){
 	return 0;
 }
 
-var genTree = function(block){
-	var leveledHashes = [];
-	var transactions = block.transactions;
-	transactions.sort();
+const genTree = function(block){
+	let transactions = block.transactions;
+	let leveledHashes = [];
 	let cL = 0;
 	
+	transactions.sort();
 	let root = false;
 	leveledHashes[cL] = [];
 	for(let i = 0; i < transactions.length; i++){ //go through each transaction,
@@ -112,7 +112,7 @@ var genTree = function(block){
 		leveledHashes[cL].push(newNode); //push to the current (bottom) level of the tree
 	}
 	leveledHashes[cL].sort(compareNode); //sort the base row
-	var count = 0;
+	let count = 0;
 	while(!root){ //while we're below the root node
 		cL++; //increase our current level
 		leveledHashes[cL] = [];
@@ -120,8 +120,8 @@ var genTree = function(block){
 			leveledHashes[cL-1].push(leveledHashes[cL-1][leveledHashes[cL-1].length-1]); //duplicate the last hash
 		}
 		for(let i = 0; i < leveledHashes[cL-1].length; i++){ //loop through the hashes in the previous level
-			if(i%2 == 0){ //if the index is even
-				var newNode = new MerkleNode(null, leveledHashes[cL-1][i], leveledHashes[cL-1][i+1], null); //make a new node at the current level, with children of the two below nodes.
+			if(i%2 === 0){ //if the index is even
+				let newNode = new MerkleNode(null, leveledHashes[cL-1][i], leveledHashes[cL-1][i+1], null); //make a new node at the current level, with children of the two below nodes.
 				newNode.computeHash(); //compute hash from children
 				leveledHashes[cL-1][i].setParentNode(newNode); //set children to ref parent
 				leveledHashes[cL-1][i+1].setParentNode(newNode); //set children to ref parent
@@ -134,23 +134,23 @@ var genTree = function(block){
 		}
 	}
 	process.stdout.write(" ".repeat(4));
-	for(var i = 0; i < leveledHashes[0].length; i++){
-		var index = i;
+	for(let i = 0; i < leveledHashes[0].length; i++){
+		let index = i;
 		if(indexMerkleTreeHashOne){ //let's make this ez
 			index++;
 		}
-		var spaceCount = merkleTreeHashDispLength-(index.toString().length-1);
-		var spaceString = " ".repeat(spaceCount);
+		let spaceCount = merkleTreeHashDispLength-(index.toString().length-1);
+		let spaceString = " ".repeat(spaceCount);
 		process.stdout.write(chalk.gray(index + spaceString));
 	}
 	process.stdout.write("\n");
 	
-	for(var i = 0; i < leveledHashes.length; i++){ //print tree
-		var lastHash = "";
+	for(let i = 0; i < leveledHashes.length; i++){ //print tree
+		let lastHash = "";
 		process.stdout.write("L" + i + ": ");
-		for(var j = 0; j < leveledHashes[i].length; j++){
-			var curHash = leveledHashes[i][j].getHash();
-			var curHashReady = curHash.substring(0, merkleTreeHashDispLength) + " ";
+		for(let j = 0; j < leveledHashes[i].length; j++){
+			let curHash = leveledHashes[i][j].getHash();
+			let curHashReady = curHash.substring(0, merkleTreeHashDispLength) + " ";
 			if(curHash == lastHash){
 				process.stdout.write(chalk.cyan(curHashReady));
 			}else{
@@ -163,17 +163,17 @@ var genTree = function(block){
 	process.stdout.write("\n");
 }
 
-var normalize = function(block){
+const normalize = function(block){
 	block.data = JSON.stringify(block.hashedData);
 	delete block.hashedData;
 }
 
-var currentBlockHeight;
-var currentBlock;
-var prevTime;
+let currentBlockHeight;
+let currentBlock;
+let prevTime;
 
-var mine = function(block){
-	var height = block.hashedData.height;
+const mine = function(block){
+	const height = block.hashedData.height;
 	console.log(chalk.green("--------------------------------# " + height + " #--------------------------------"));
 	prevTime = new Date().getTime();
 	genTree(block);
@@ -181,8 +181,8 @@ var mine = function(block){
 	const data = block.data;
 	currentBlock = block;
 	currentBlockHeight = height;
-	var minerParams = [];
-	var minerLoc = "";
+	let minerParams = [];
+	let minerLoc = "";
 	process.stdout.write(chalk.magenta("Mining block (" + process.platform + ")..."));
 	switch(process.platform){
 		case "win32":
@@ -203,20 +203,20 @@ var mine = function(block){
 			return;
 		}
 		
-		var nonce = parseInt(nonce);
-		currentBlock.data += nonce;
+		const parsedNonce = parseInt(nonce);
+		currentBlock.data += parsedNonce;
 		currentBlock.hash = helpers.sha256(currentBlock.data);
 		
 		blocks[currentBlockHeight] = block;
 		addBlock(block, currentBlockHeight);
 		broadcastBlock(block, currentBlockHeight);
 		
-		var now = new Date().getTime();
+		const now = new Date().getTime();
 		process.stdout.write("\r\x1b[K"); //clear "mining block" message
 		console.log(chalk.blue("Mined block!\n"));
-		console.log("Rate:  " + ((nonce/((now-prevTime)/1000))/1000000).toFixed(2) + chalk.gray(" MH/s"));
+		console.log("Rate:  " + ((parsedNonce/((now-prevTime)/1000))/1000000).toFixed(2) + chalk.gray(" MH/s"));
 		console.log("Diff:  " + difficulty);
-		console.log("Nonce: " + nonce);
+		console.log("parsedNonce: " + parsedNonce);
 		console.log("Hash:  " + currentBlock.hash);
 
 		console.log(chalk.green("--------------------------------/ " + currentBlockHeight + " /--------------------------------\n"));
@@ -224,12 +224,12 @@ var mine = function(block){
 	});
 }
 
-var genFakeTransactions = function(){
-	var transactions = [];
-	var numOfTransactions = Math.floor(Math.random()*fakeTransactions);
+const genFakeTransactions = function(){
+	let transactions = [];
+	const numOfTransactions = Math.floor(Math.random()*fakeTransactions);
 	for(let i = 0; i < numOfTransactions; i++){
-		var time = Math.round((new Date()).getTime() / 1000);
-		var trans = {
+		const time = Math.round((new Date()).getTime() / 1000);
+		const trans = {
 			reciever: keygen.genPair().address,
 			amount: Math.ceil(Math.random()*1000000),
 			timestamp: time,
@@ -241,9 +241,9 @@ var genFakeTransactions = function(){
 	return transactions;
 }
 
-var makeFakeBlock = function(){
-	var time = Math.round((new Date()).getTime() / 1000);
-	var block = {
+const makeFakeBlock = function(){
+	const time = Math.round((new Date()).getTime() / 1000);
+	let block = {
 		hash: "",
 		transactions: genFakeTransactions(),
 		hashedData: {
@@ -264,16 +264,16 @@ var makeFakeBlock = function(){
 	return block;
 }
 
-var verifyBlock = function(block){ //expand, of course
-	var checkHash = helpers.sha256(block.data);
-	var blockHash = block.hash;
+const verifyBlock = function(block){ //expand, of course
+	const checkHash = helpers.sha256(block.data);
+	const blockHash = block.hash;
 	if(checkHash == blockHash){
 		return true;
 	}
 	return false;
 }
 
-var startUp = function(){
+const startUp = function(){
 	helpers.logSolo("DrakeCoin client initialization...\n");
 	console.log("Client running with address: " + address);
 	console.log("Current height: " + blockHeight);
@@ -287,7 +287,7 @@ var startUp = function(){
 					console.log(pData);
 					console.log("/-----------------RECV");
 				}
-				var response = {};
+				let response = {};
 				switch(pData.type){
 					case "blockHeightRequest":
 						response = {type: "blockHeight", blockHeight: blocks.length-1};
@@ -296,14 +296,13 @@ var startUp = function(){
 						if(pData.height == "EMPTY"){
 							pData.height = 0;
 						}
-						var blockArray = [];
-						for(var i = parseInt(pData.height); i < blocks.length; i++){
+						let blockArray = [];
+						for(let i = parseInt(pData.height); i < blocks.length; i++){
 							blockArray.push(blocks[i]);
 						}
 						response = {type: "blockArray", blockArray: blockArray};
 						break;
 					case "minedBlock":
-						//var request = {type: "minedBlock", block: block, height: height};
 						if(verifyBlock(pData.block)){
 							process.stdout.write("\r\x1b[K"); //clear "mining block" message
 							console.log(chalk.red("SNIPED\n"));
@@ -312,7 +311,7 @@ var startUp = function(){
 							}
 							addBlock(pData.block, pData.height);
 							
-							var expandedNewBlock = helpers.expandBlock(pData.block);
+							let expandedNewBlock = helpers.expandBlock(pData.block);
 							console.log("Diff:  " + difficulty);
 							console.log("Nonce: " + expandedNewBlock.nonce);
 							console.log("Hash:  " + expandedNewBlock.hash);
@@ -348,19 +347,19 @@ var startUp = function(){
 	synch();
 }
 
-var synch = function(){
-	var client = new net.Socket();
+const synch = function(){
+	const client = new net.Socket();
 	if(clientVerbose){
 		console.log("Connecting to " + neighbors[0].address + ":" + neighbors[0].port);
 	}
 	client.connect(neighbors[0].port, neighbors[0].address, function() {
-		var request = {type: "blockHeightRequest"};
+		const request = {type: "blockHeightRequest"};
 		client.write(JSON.stringify(request));
 	});
 
 	client.on('data', function(data) {
 		try{
-			var pData = JSON.parse(data.toString());
+			const pData = JSON.parse(data.toString());
 			if(clientVerbose){
 				console.log("------------------RECV: " + pData.type);
 				console.log(pData);
@@ -370,17 +369,17 @@ var synch = function(){
 				case "blockHeight":
 					console.log("Remote block height: " + pData.blockHeight);
 					if(blockHeight == "EMPTY" || blockHeight < pData.blockHeight){
-						var request = {type: "blockRequest", height: blockHeight};
+						const request = {type: "blockRequest", height: blockHeight};
 						client.write(JSON.stringify(request));
 					}else{
 						client.destroy();
 					}
 					break;
 				case "blockArray":
-					for(var i = 0; i < pData.blockArray.length; i++){
-						var data = pData.blockArray[i].data;
-						var strippedData = data.substr(0, data.lastIndexOf("}")+1);
-						var height = JSON.parse(strippedData).height;
+					for(let i = 0; i < pData.blockArray.length; i++){
+						const data = pData.blockArray[i].data;
+						const strippedData = data.substr(0, data.lastIndexOf("}")+1);
+						const height = JSON.parse(strippedData).height;
 						if(verifyBlock(pData.blockArray[i])){
 							addBlock(pData.blockArray[i], height);
 						}
@@ -406,12 +405,12 @@ var synch = function(){
 	});
 }
 
-var clientReady = function(){
+const clientReady = function(){
 	mine(makeFakeBlock());
 }
 
-var addBlock = function(block, height){
-	var stringBlock = JSON.stringify(block);
+const addBlock = function(block, height){
+	const stringBlock = JSON.stringify(block);
 	blocks[height] = block;
 	BLOCKDB.put(height, stringBlock, function (err) {
 		if (err) return console.log('Ooops!', err);
@@ -420,11 +419,11 @@ var addBlock = function(block, height){
 	});
 }
 
-var broadcastBlock = function(block, height){
-	var client = new net.Socket();
-	for(var i = 0; i < neighbors.length; i++){
+const broadcastBlock = function(block, height){
+	const client = new net.Socket();
+	for(let i = 0; i < neighbors.length; i++){
 		client.connect(neighbors[i].port, neighbors[i].address, function() {
-			var request = {type: "minedBlock", block: block, height: height};
+			const request = {type: "minedBlock", block: block, height: height};
 			client.write(JSON.stringify(request));
 			client.destroy();
 		});
@@ -437,28 +436,28 @@ var broadcastBlock = function(block, height){
 	}
 }
 
-var getHeightFromBlock = function(block){
-	var data = block.data;
-	var strippedData = data.substr(0, data.lastIndexOf("}")+1);
+const getHeightFromBlock = function(block){
+	const data = block.data;
+	const strippedData = data.substr(0, data.lastIndexOf("}")+1);
 	return JSON.parse(strippedData).height;
 }
 
-var getBlocksFromDB = function(height){
-	for(var i = 0; i <= height; i++){
+const getBlocksFromDB = function(height){
+	for(let i = 0; i <= height; i++){
 		BLOCKDB.get(i, function (err, value) {
 			if(err && err.type == 'NotFoundError'){
 				console.log('WTF?!', err);
 			}else{
-				var block = JSON.parse(value);
-				var height = getHeightFromBlock(block);
+				const block = JSON.parse(value);
+				const height = getHeightFromBlock(block);
 				blocks[height] = block;
 			}
 		});
 	}
 }
 
-if (process.platform === "win32") {
-	var rl = require("readline").createInterface({
+if(process.platform === "win32"){ //Thanks https://stackoverflow.com/a/14861513
+	const rl = require("readline").createInterface({
 		input: process.stdin,
 		output: process.stdout
 	});
@@ -469,7 +468,7 @@ if (process.platform === "win32") {
 }
 
 process.on("SIGINT", function () {
-	var expandedBlocks = helpers.makeExpandedBlocksCopy(blocks);
+	const expandedBlocks = helpers.makeExpandedBlocksCopy(blocks);
 	fs.writeFileSync("./debug/" + serverPort + "testBlocksExpanded.html", helpers.makeHTML(expandedBlocks));
 	fs.writeFileSync("./debug/" + serverPort + "testBlocks.html", helpers.makeHTML(blocks));
 	process.stdout.write("\r\x1b[K"); //clear "mining block" message

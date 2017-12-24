@@ -6,13 +6,15 @@ const keygen = require('./keygen.js');
 const fs = require('fs');
 const exec = require('child_process').execFile;
 
-const difficulty = 4;
+const difficulty = 5;
 const target = "0".repeat(difficulty) + "f".repeat(64-difficulty);
 
 const checkTime = 1; //amount of time between hashrate displays
 
 const merkleTreeHashDispLength = 4;
 const indexMerkleTreeHashOne = true;
+
+var fakeTransactions = 32;
 
 var serverPort = parseInt(process.argv[2]);
 
@@ -54,7 +56,7 @@ CLIENTDB.get('address', function (err, value) {
 			blockHeight = value;
 			getBlocksFromDB(blockHeight);
 		}
-		clientReady();
+		startUp();
 	});
 });
 
@@ -94,7 +96,7 @@ const compareNode = function(a, b){
 
 var genTree = function(block){
 	var leveledHashes = [];
-	var transactions = blocks[block].transactions;
+	var transactions = block.transactions;
 	transactions.sort();
 	let cL = 0;
 	
@@ -124,7 +126,7 @@ var genTree = function(block){
 		}
 		if(leveledHashes[cL].length == 1){
 			root = true;
-			blocks[block].hashedData.merkleRoot = leveledHashes[cL][0].getHash();
+			block.hashedData.merkleRoot = leveledHashes[cL][0].getHash();
 		}
 	}
 	process.stdout.write(" ".repeat(4));
@@ -158,43 +160,86 @@ var genTree = function(block){
 }
 
 var normalize = function(block){
-	blocks[block].data = JSON.stringify(blocks[block].hashedData);
-	delete blocks[block].hashedData;
+	block.data = JSON.stringify(block.hashedData);
+	delete block.hashedData;
 }
 
+var currentBlockHeight;
 var currentBlock;
 var prevTime;
-var lastNonce;
 
 var mine = function(block){
-	console.log(chalk.red("--------------------------------# " + block + " #--------------------------------"));
+	var height = block.hashedData.height;
+	console.log(chalk.red("--------------------------------# " + height + " #--------------------------------"));
 	prevTime = new Date().getTime();
 	genTree(block);
 	normalize(block);
-	const data = blocks[block].data;
+	const data = block.data;
 	currentBlock = block;
+	currentBlockHeight = height;
 	process.stdout.write(chalk.blue("Mining block..."));
 	exec('DCSHA256/bin/Release/DCSHA256.exe', [target, data], function(err, nonce) {
-		lastNonce = parseInt(nonce);
-		blocks[currentBlock].data += parseInt(nonce);
-		blocks[currentBlock].hash = helpers.sha256(blocks[currentBlock].data);
-		
+		var nonce = parseInt(nonce);
+		currentBlock.data += nonce;
+		currentBlock.hash = helpers.sha256(currentBlock.data);
+
 		var now = new Date().getTime();
 		process.stdout.write("\r\x1b[K"); //clear "mining block" message
 		console.log(chalk.blue("Block mined!\n"));
-		console.log("Rate:  " + ((lastNonce/((now-prevTime)/1000))/1000000).toFixed(2) + chalk.gray(" MH/s"));
+		console.log("Rate:  " + ((nonce/((now-prevTime)/1000))/1000000).toFixed(2) + chalk.gray(" MH/s"));
 		console.log("Diff:  " + difficulty);
-		console.log("Nonce: " + lastNonce);
-		console.log("Hash:  " + blocks[currentBlock].hash);
-		console.log(chalk.red("--------------------------------/ " + currentBlock + " /--------------------------------\n"));
-		
-		if(currentBlock < blocks.length-1){
-			blocks[currentBlock+1].hashedData.previousHash = blocks[currentBlock].hash;
-			mine(currentBlock+1);
-		}else{
-			doneMining();
-		}        		
+		console.log("Nonce: " + nonce);
+		console.log("Hash:  " + currentBlock.hash);
+		console.log(chalk.red("--------------------------------/ " + currentBlockHeight + " /--------------------------------\n"));
+		newBlockMined(block, currentBlockHeight);
 	});
+}
+
+var newBlockMined = function(block, height){
+	blocks[height] = block;
+	addBlock(block, height);
+	broadcastBlock(block, height);
+	mine(makeFakeBlock());
+}
+
+var genFakeTransactions = function(){
+	var transactions = [];
+	var numOfTransactions = Math.floor(Math.random()*fakeTransactions);
+	for(let i = 0; i < numOfTransactions; i++){
+		var time = Math.round((new Date()).getTime() / 1000);
+		var trans = {
+			reciever: keygen.genPair().address,
+			amount: Math.ceil(Math.random()*1000000),
+			timestamp: time,
+			prevOut: "someid",
+			sig: "aaa"
+		};
+		transactions.push(trans);
+	}
+	return transactions;
+}
+
+var makeFakeBlock = function(){
+	var time = Math.round((new Date()).getTime() / 1000);
+	var block = {
+		hash: "",
+		transactions: genFakeTransactions(),
+		hashedData: {
+			previousHash: blocks[blocks.length-1].hash,
+			height: blocks.length,
+			timestamp: time,
+			merkleRoot: ""
+		}
+	}
+	
+	block.transactions.unshift( //Miner gotta get paid!
+		{
+			reciever: address,
+			amount: 25000000,
+			timestamp: time
+		}
+	);
+	return block;
 }
 
 var verifyBlock = function(block){ //expand, of course
@@ -206,7 +251,7 @@ var verifyBlock = function(block){ //expand, of course
 	return false;
 }
 
-var clientReady = function(){
+var startUp = function(){
 	console.log("Client running with address: " + address);
 	console.log("Current height: " + blockHeight);
 	server = net.createServer(function(socket) {
@@ -276,6 +321,8 @@ var synch = function(){
 					if(blockHeight == "EMPTY" || blockHeight < pData.blockHeight){
 						var request = {type: "blockRequest", height: blockHeight};
 						client.write(JSON.stringify(request));
+					}else{
+						client.destroy();
 					}
 					break;
 				case "blockArray":
@@ -287,7 +334,7 @@ var synch = function(){
 							addBlock(pData.blockArray[i], height);
 						}
 					}
-					client.close();
+					client.destroy();
 					break;
 			}
 		}catch(e){
@@ -295,18 +342,22 @@ var synch = function(){
 	});
 
 	client.on('close', function() {
+		clientReady();
 	});
 	
 	client.on('error', function(e) {
 	});
 }
 
+var clientReady = function(){
+	mine(makeFakeBlock());
+}
+
 var addBlock = function(block, height){
 	var stringBlock = JSON.stringify(block);
+	blocks[height] = block;
 	BLOCKDB.put(height, stringBlock, function (err) {
 		if (err) return console.log('Ooops!', err);
-		console.log("Added verified block: " + height);
-		blocks[height] = block;
 	});
 	CLIENTDB.put('blockHeight', height, function (err) {
 	});
@@ -317,11 +368,14 @@ var broadcastBlock = function(block, height){
 	for(var i = 0; i < neighbors.length; i++){
 		client.connect(neighbors[i].port, neighbors[i].address, function() {
 			var request = {type: "minedBlock", block: block, height: height};
-			client.close(JSON.stringify(request));
+			client.write(JSON.stringify(request));
+			client.destroy();
 		});
 
 		client.on('close', function() {
-			console.log('Connection closed');
+		});
+		
+		client.on('error', function(e) {
 		});
 	}
 }
@@ -345,3 +399,23 @@ var getBlocksFromDB = function(height){
 		});
 	}
 }
+
+if (process.platform === "win32") {
+	var rl = require("readline").createInterface({
+		input: process.stdin,
+		output: process.stdout
+	});
+	
+	rl.on("SIGINT", function () {
+		process.emit("SIGINT");
+	});
+}
+
+process.on("SIGINT", function () {
+	var expandedBlocks = helpers.makeExpandedBlocksCopy(blocks);
+	fs.writeFileSync("./debug/testBlocksExpanded.html", helpers.makeHTML(expandedBlocks));
+	fs.writeFileSync("./debug/testBlocks.html", helpers.makeHTML(blocks));
+	process.stdout.write("\r\x1b[K"); //clear "mining block" message
+	console.log(chalk.blue("Cancelled! Blocks dumped to log."));
+	process.exit();
+});

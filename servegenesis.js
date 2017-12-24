@@ -5,7 +5,7 @@ const keygen = require('./keygen.js');
 const fs = require('fs');
 const exec = require('child_process').execFile;
 
-const difficulty = 4;
+const difficulty = 5;
 const target = "0".repeat(difficulty) + "f".repeat(64-difficulty);
 
 const checkTime = 1; //amount of time between hashrate displays
@@ -24,8 +24,7 @@ var blocks = [
 			{
 				reciever: "DL9fSHaRHYhLw5kiYNMDU9wJaPVKxSM4KT",
 				amount: 25000000,
-				timestamp: 1513445082,
-				sig: "aaa"
+				timestamp: 1513445082
 			}
 		],
 		hashedData: {

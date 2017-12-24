@@ -181,9 +181,9 @@ var mine = function(block){
 	const data = block.data;
 	currentBlock = block;
 	currentBlockHeight = height;
-	process.stdout.write(chalk.magenta("Mining block..."));
 	var minerParams = [];
 	var minerLoc = "";
+	process.stdout.write(chalk.magenta("Mining block (" + process.platform + ")..."));
 	switch(process.platform){
 		case "win32":
 			minerParams = [target, data];

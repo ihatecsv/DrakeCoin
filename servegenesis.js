@@ -5,7 +5,7 @@ const keygen = require('./keygen.js');
 const fs = require('fs');
 const exec = require('child_process').execFile;
 
-const difficulty = 4;
+const difficulty = 6;
 const target = "0".repeat(difficulty) + "f".repeat(64-difficulty);
 
 const checkTime = 1; //amount of time between hashrate displays
@@ -13,7 +13,7 @@ const checkTime = 1; //amount of time between hashrate displays
 const merkleTreeHashDispLength = 4;
 const indexMerkleTreeHashOne = true;
 
-var port = 5555;
+var port = 43330;
 var fakeBlocks = 0;
 var fakeTransactions = 32;
 

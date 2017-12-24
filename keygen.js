@@ -22,7 +22,7 @@ const genPair = function(){
 
 	baseString = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
-	const bigStuff = bigInt(address.toString("hex"), 16);
+	let bigStuff = bigInt(address.toString("hex"), 16);
 
 	let outputString = "";
 

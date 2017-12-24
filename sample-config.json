@@ -1,0 +1,13 @@
+{
+	"clientIdentifier": 1,
+	"serverPort": 43330,
+	"neighbors": [
+		{"address": "255.255.255.255", "port": 43330}
+	],
+	"difficulty": 5,
+	"fakeTransactions": 16,
+	"merkleTreeHashDispLength": 4,
+	"indexMerkleTreeHashOne": true,
+	"clientVerbose": false,
+	"serverVerbose": false
+}

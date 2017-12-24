@@ -6,28 +6,31 @@ const keygen = require('./keygen.js');
 const fs = require('fs');
 const exec = require('child_process').execFile;
 
-const difficulty = parseInt(process.argv[2]);
+let config = {};
+
+if(fs.existsSync("config.json")){
+	config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+}else{
+	fs.createReadStream("sample-config.json").pipe(fs.createWriteStream("config.json"));
+	console.log("Made configuration file! Please edit config.json before running again.");
+	return;
+}
+
+const clientIdentifier = config.clientIdentifier;
+const serverPort = config.serverPort;
+const neighbors = config.neighbors;
+const difficulty = config.difficulty;
+const fakeTransactions = config.fakeTransactions;
+const merkleTreeHashDispLength = config.merkleTreeHashDispLength;
+const indexMerkleTreeHashOne = config.indexMerkleTreeHashOne;
+const clientVerbose = config.clientVerbose;
+const serverVerbose = config.serverVerbose;
+
 const target = "0".repeat(difficulty) + "f".repeat(64-difficulty);
 
-const checkTime = 1; //amount of time between hashrate displays
-
-const merkleTreeHashDispLength = 4;
-const indexMerkleTreeHashOne = true;
-
-const fakeTransactions = 16;
-
-const serverPort = parseInt(process.argv[3]);
-const serverVerbose = false;
-const clientVerbose = false;
-
-const neighborPort = parseInt(process.argv[4]);
-const neighborAddress = process.argv[5];
-
-const neighbors = [{port: neighborPort, address: neighborAddress}];
-
-const UTXODB = level('./DB/UTXODB' + serverPort);
-const BLOCKDB = level('./DB/BLOCKDB' + serverPort);
-const CLIENTDB = level('./DB/CLIENTDB' + serverPort);
+const UTXODB = level('./DB/UTXODB' + clientIdentifier);
+const BLOCKDB = level('./DB/BLOCKDB' + clientIdentifier);
+const CLIENTDB = level('./DB/CLIENTDB' + clientIdentifier);
 
 let blocks = [];
 let unconfirmedTX = [];
@@ -469,8 +472,8 @@ if(process.platform === "win32"){ //Thanks https://stackoverflow.com/a/14861513
 
 process.on("SIGINT", function () {
 	const expandedBlocks = helpers.makeExpandedBlocksCopy(blocks);
-	fs.writeFileSync("./debug/" + serverPort + "testBlocksExpanded.html", helpers.makeHTML(expandedBlocks));
-	fs.writeFileSync("./debug/" + serverPort + "testBlocks.html", helpers.makeHTML(blocks));
+	fs.writeFileSync("./debug/" + clientIdentifier + "testBlocksExpanded.html", helpers.makeHTML(expandedBlocks));
+	fs.writeFileSync("./debug/" + clientIdentifier + "testBlocks.html", helpers.makeHTML(blocks));
 	process.stdout.write("\r\x1b[K"); //clear "mining block" message
 	console.log(chalk.yellow("Cancelled! Blocks dumped to log."));
 	process.exit();

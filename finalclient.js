@@ -1,4 +1,5 @@
 const net = require('net');
+const level = require('level');
 const chalk = require('chalk');
 const helpers = require('./helpers.js');
 const keygen = require('./keygen.js');
@@ -13,11 +14,49 @@ const checkTime = 1; //amount of time between hashrate displays
 const merkleTreeHashDispLength = 4;
 const indexMerkleTreeHashOne = true;
 
-var clientPort = 43329;
-var serverPort = 43330;
+var serverPort = parseInt(process.argv[2]);
+
+var neighborPort = parseInt(process.argv[3]);
 
 var blocks = [];
-var blockHeight = 0;
+
+var neighbors = [{port: neighborPort, address: "127.0.0.1"}];
+var unconfirmedTX = [];
+var blockHeight = "EMPTY";
+var address = "";
+
+var UTXODB = level('./DB/UTXODB' + serverPort);
+var BLOCKDB = level('./DB/BLOCKDB' + serverPort);
+var CLIENTDB = level('./DB/CLIENTDB' + serverPort);
+
+var server = null;
+
+CLIENTDB.get('address', function (err, value) {
+	if(err && err.type == 'NotFoundError'){
+		console.log("Generating new address!");
+		var keypair = keygen.genPair();
+		CLIENTDB.put('address', keypair.address, function (err) {
+			if (err) return console.log('Ooops!', err);
+		});
+		CLIENTDB.put('privateKey', keypair.privateKey, function (err) {
+			if (err) return console.log('Ooops!', err);
+		});
+		address = keypair.address;
+	}else{
+		address = value;
+	}
+	CLIENTDB.get('blockHeight', function (err, value) {
+		if(err && err.type == 'NotFoundError'){
+			CLIENTDB.put('blockHeight', "EMPTY", function (err) {
+				if (err) return console.log('Ooops!', err);
+			});
+		}else{
+			blockHeight = value;
+			getBlocksFromDB(blockHeight);
+		}
+		clientReady();
+	});
+});
 
 class MerkleNode {
 	constructor(parentNode, childNode0, childNode1, transaction) {
@@ -167,14 +206,10 @@ var verifyBlock = function(block){ //expand, of course
 	return false;
 }
 
-var doneMining = function(){
-	console.log("Starting server!");
-	
-	var expandedBlocks = helpers.makeExpandedBlocksCopy(blocks);
-	fs.writeFileSync("./debug/testBlocksExpanded.html", helpers.makeHTML(expandedBlocks));
-	fs.writeFileSync("./debug/testBlocks.html", helpers.makeHTML(blocks));
-
-	var server = net.createServer(function(socket) {
+var clientReady = function(){
+	console.log("Client running with address: " + address);
+	console.log("Current height: " + blockHeight);
+	server = net.createServer(function(socket) {
 		socket.pipe(socket);
 		socket.on('data', function(data) {
 			try{
@@ -185,14 +220,22 @@ var doneMining = function(){
 				var response = {};
 				switch(pData.type){
 					case "blockHeightRequest":
-						response = {type: "blockHeight", blockHeight: blocks.length};
+						response = {type: "blockHeight", blockHeight: blocks.length-1};
 						break;
 					case "blockRequest":
+						if(pData.height == "EMPTY"){
+							pData.height = 0;
+						}
 						var blockArray = [];
 						for(var i = parseInt(pData.height); i < blocks.length; i++){
 							blockArray.push(blocks[i]);
 						}
 						response = {type: "blockArray", blockArray: blockArray};
+						break;
+					case "minedBlock":
+						var request = {type: "minedBlock", block: block, height: height};
+						addBlock(request.block, request.height);
+						response = {type: "blockRecipt"};
 						break;
 					default:
 						response = {type: "unknownRequest"}
@@ -211,7 +254,7 @@ var doneMining = function(){
 			return;
 		});
 	});
-	//server.listen(serverPort, '127.0.0.1');
+	server.listen(serverPort, '127.0.0.1');
 	
 	synch();
 }
@@ -219,7 +262,7 @@ var doneMining = function(){
 var synch = function(){
 	var client = new net.Socket();
 		
-	client.connect(5555, '127.0.0.1', function() {
+	client.connect(neighbors[0].port, neighbors[0].address, function() {
 		var request = {type: "blockHeightRequest"};
 		client.write(JSON.stringify(request));
 	});
@@ -229,17 +272,22 @@ var synch = function(){
 			var pData = JSON.parse(data.toString());
 			switch(pData.type){
 				case "blockHeight":
-					console.log("Current block height: " + blockHeight);
 					console.log("Remote block height: " + pData.blockHeight);
-					if(blockHeight < pData.blockHeight){
+					if(blockHeight == "EMPTY" || blockHeight < pData.blockHeight){
 						var request = {type: "blockRequest", height: blockHeight};
 						client.write(JSON.stringify(request));
 					}
 					break;
 				case "blockArray":
 					for(var i = 0; i < pData.blockArray.length; i++){
-						console.log(verifyBlock(pData.blockArray[i]));
+						var data = pData.blockArray[i].data;
+						var strippedData = data.substr(0, data.lastIndexOf("}")+1);
+						var height = JSON.parse(strippedData).height;
+						if(verifyBlock(pData.blockArray[i])){
+							addBlock(pData.blockArray[i], height);
+						}
 					}
+					client.close();
 					break;
 			}
 		}catch(e){
@@ -247,9 +295,53 @@ var synch = function(){
 	});
 
 	client.on('close', function() {
-		console.log('Connection closed');
+	});
+	
+	client.on('error', function(e) {
 	});
 }
 
-helpers.logSolo("DrakeCoin client initialization...\n");
-doneMining();
+var addBlock = function(block, height){
+	var stringBlock = JSON.stringify(block);
+	BLOCKDB.put(height, stringBlock, function (err) {
+		if (err) return console.log('Ooops!', err);
+		console.log("Added verified block: " + height);
+		blocks[height] = block;
+	});
+	CLIENTDB.put('blockHeight', height, function (err) {
+	});
+}
+
+var broadcastBlock = function(block, height){
+	var client = new net.Socket();
+	for(var i = 0; i < neighbors.length; i++){
+		client.connect(neighbors[i].port, neighbors[i].address, function() {
+			var request = {type: "minedBlock", block: block, height: height};
+			client.close(JSON.stringify(request));
+		});
+
+		client.on('close', function() {
+			console.log('Connection closed');
+		});
+	}
+}
+
+var getHeightFromBlock = function(block){
+	var data = block.data;
+	var strippedData = data.substr(0, data.lastIndexOf("}")+1);
+	return JSON.parse(strippedData).height;
+}
+
+var getBlocksFromDB = function(height){
+	for(var i = 0; i <= height; i++){
+		BLOCKDB.get(i, function (err, value) {
+			if(err && err.type == 'NotFoundError'){
+				console.log('WTF?!', err);
+			}else{
+				var block = JSON.parse(value);
+				var height = getHeightFromBlock(block);
+				blocks[height] = block;
+			}
+		});
+	}
+}

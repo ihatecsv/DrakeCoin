@@ -13,8 +13,8 @@ const checkTime = 1; //amount of time between hashrate displays
 const merkleTreeHashDispLength = 4;
 const indexMerkleTreeHashOne = true;
 
-var port = 43330;
-var fakeBlocks = 3;
+var port = 43329;
+var fakeBlocks = 0;
 var fakeTransactions = 32;
 
 var blocks = [
@@ -23,14 +23,14 @@ var blocks = [
 		transactions: [
 			{
 				reciever: "DL9fSHaRHYhLw5kiYNMDU9wJaPVKxSM4KT",
-				amount: 25000000	,
+				amount: 25000000,
 				timestamp: 1513445082,
 				sig: "aaa"
 			}
 		],
 		hashedData: {
 			previousHash: "0000000000000000000000000000000000000000000000000000000000000000",
-			height: 1,
+			height: 0,
 			timestamp: 1513445082,
 			merkleRoot: ""
 		}
@@ -221,7 +221,7 @@ helpers.logSolo("DrakeCoin serve-genesis initialization...\n");
 mine(0);
 
 var doneMining = function(){
-	console.log("Starting server!");
+	console.log("Starting server on port " + port);
 	
 	var expandedBlocks = helpers.makeExpandedBlocksCopy(blocks);
 	fs.writeFileSync("./debug/testBlocksExpanded.html", helpers.makeHTML(expandedBlocks));
@@ -238,9 +238,12 @@ var doneMining = function(){
 				var response = {};
 				switch(pData.type){
 					case "blockHeightRequest":
-						response = {type: "blockHeight", blockHeight: blocks.length};
+						response = {type: "blockHeight", blockHeight: blocks.length-1};
 						break;
 					case "blockRequest":
+						if(pData.height == "EMPTY"){
+							pData.height = 0;
+						}
 						var blockArray = [];
 						for(var i = parseInt(pData.height); i < blocks.length; i++){
 							blockArray.push(blocks[i]);
@@ -264,5 +267,5 @@ var doneMining = function(){
 			return;
 		});
 	});
-	server.listen(5555, '127.0.0.1');
+	server.listen(port, '127.0.0.1');
 }

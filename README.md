@@ -7,7 +7,7 @@
 DrakeCoin is totally not a real cryptocurrency, and is basically just me learning about blockchains and cryptographic consensus.
 
 #### Screenshot
-![Screenshot](https://i.imgur.com/WNZg1EB.png)
+![Screenshot](https://i.imgur.com/3ua9DTW.png)
 
 #### Disclaimer
 * I don't really know much about cryptocurrency at the time of writing this software. This should not be used as a reference because I guarantee there's something wrong with it cryptographically.

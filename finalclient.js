@@ -268,9 +268,10 @@ const makeFakeBlock = function(){
 }
 
 const verifyBlock = function(block){ //expand, of course
+	const expandedBlock = helpers.expandBlock(block);
 	const checkHash = helpers.sha256(block.data);
 	const blockHash = block.hash;
-	if(checkHash == blockHash){
+	if(checkHash == blockHash && blocks[expandedBlock.height] == null){
 		return true;
 	}
 	return false;
@@ -313,6 +314,7 @@ const startUp = function(){
 								miningProc.kill();
 							}
 							addBlock(pData.block, pData.height);
+							broadcastBlock(pData.block, pData.height);
 							
 							let expandedNewBlock = helpers.expandBlock(pData.block);
 							console.log("Diff:  " + difficulty);

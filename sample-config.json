@@ -2,7 +2,7 @@
 	"clientIdentifier": 1,
 	"serverPort": 43330,
 	"neighbors": [
-		{"address": "255.255.255.255", "port": 43330}
+		{"address": "drakeluce.com", "port": 43330}
 	],
 	"difficulty": 6,
 	"fakeTransactions": 16,

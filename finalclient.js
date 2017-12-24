@@ -286,6 +286,10 @@ const startUp = function(){
 	helpers.logSolo("DrakeCoin client initialization...\n");
 	console.log("Client running with address: " + address);
 	console.log("Current height: " + blockHeight);
+	synch();
+}
+
+const startServer = function(){
 	server = net.createServer(function(socket) {
 		socket.pipe(socket);
 		socket.on('data', function(data) {
@@ -353,8 +357,6 @@ const startUp = function(){
 		});
 	});
 	server.listen(serverPort);
-	
-	synch();
 }
 
 const synch = function(){
@@ -416,6 +418,7 @@ const synch = function(){
 }
 
 const clientReady = function(){
+	startServer();
 	mine(makeFakeBlock());
 }
 

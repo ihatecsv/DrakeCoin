@@ -13,7 +13,7 @@ const checkTime = 1; //amount of time between hashrate displays
 const merkleTreeHashDispLength = 4;
 const indexMerkleTreeHashOne = true;
 
-var port = 43330;
+var port = parseInt(process.argv[2]);
 var fakeBlocks = 0;
 var fakeTransactions = 32;
 

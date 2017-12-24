@@ -6,7 +6,7 @@ const keygen = require('./keygen.js');
 const fs = require('fs');
 const exec = require('child_process').execFile;
 
-const difficulty = 6;
+const difficulty = 5;
 const target = "0".repeat(difficulty) + "f".repeat(64-difficulty);
 
 const checkTime = 1; //amount of time between hashrate displays
@@ -182,7 +182,16 @@ var mine = function(block){
 	currentBlock = block;
 	currentBlockHeight = height;
 	process.stdout.write(chalk.magenta("Mining block..."));
-	miningProc = exec('DCSHA256/bin/Release/DCSHA256.exe', [target, data], function(err, nonce) {
+	var minerParams = [];
+	var minerLoc = "";
+	if(process.platform == "win32"){
+		var minerParams = [target, data];
+		var minerLoc = "DCSHA256/bin/Release/DCSHA256.exe";
+	}else{
+		var minerParams = ["jsminer.js", target, data];
+		var minerLoc = "node";
+	}
+	miningProc = exec(minerLoc, minerParams, function(err, nonce) {
 		if(err){
 			return;
 		}

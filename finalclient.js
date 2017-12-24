@@ -435,8 +435,8 @@ const addBlock = function(block, height){
 }
 
 const broadcastBlock = function(block, height){
-	const client = new net.Socket();
 	for(let i = 0; i < neighbors.length; i++){
+		const client = new net.Socket();
 		client.connect(neighbors[i].port, neighbors[i].address, function() {
 			const request = {type: "minedBlock", block: block, height: height};
 			console.log(chalk.cyan("Sending block " + height + " to " + neighbors[i].address + ":" + neighbors[i].port));

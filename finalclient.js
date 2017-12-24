@@ -17,6 +17,7 @@ if(fs.existsSync("config.json")){
 }
 
 let clientIdentifier = config.clientIdentifier;
+let randomClientIdentifier = config.randomClientIdentifier;
 if(randomClientIdentifier){
 	clientIdentifier = Math.floor(Math.random()*10000);
 }

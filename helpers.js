@@ -50,3 +50,12 @@ module.exports.makeExpandedBlocksCopy = function(blocks){
 	});
 	return expandedBlocks;
 }
+
+module.exports.expandBlock = function(block){
+	var copiedBlock = JSON.parse(JSON.stringify(block));
+	copiedBlock.nonce = parseInt(copiedBlock.data.substr(copiedBlock.data.lastIndexOf("}")+1));
+	copiedBlock.data = copiedBlock.data.substr(0, copiedBlock.data.lastIndexOf("}")+1);
+	copiedBlock.hashedData = JSON.parse(copiedBlock.data);
+	delete copiedBlock.data;
+	return copiedBlock;
+}

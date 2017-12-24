@@ -6,7 +6,7 @@ const keygen = require('./keygen.js');
 const fs = require('fs');
 const exec = require('child_process').execFile;
 
-const difficulty = 5;
+const difficulty = 6;
 const target = "0".repeat(difficulty) + "f".repeat(64-difficulty);
 
 const checkTime = 1; //amount of time between hashrate displays
@@ -14,9 +14,11 @@ const checkTime = 1; //amount of time between hashrate displays
 const merkleTreeHashDispLength = 4;
 const indexMerkleTreeHashOne = true;
 
-var fakeTransactions = 32;
+var fakeTransactions = 16;
 
 var serverPort = parseInt(process.argv[2]);
+var serverVerbose = false;
+var clientVerbose = false;
 
 var neighborPort = parseInt(process.argv[3]);
 
@@ -32,6 +34,7 @@ var BLOCKDB = level('./DB/BLOCKDB' + serverPort);
 var CLIENTDB = level('./DB/CLIENTDB' + serverPort);
 
 var server = null;
+var miningProc = null;
 
 CLIENTDB.get('address', function (err, value) {
 	if(err && err.type == 'NotFoundError'){
@@ -170,36 +173,38 @@ var prevTime;
 
 var mine = function(block){
 	var height = block.hashedData.height;
-	console.log(chalk.red("--------------------------------# " + height + " #--------------------------------"));
+	console.log(chalk.green("--------------------------------# " + height + " #--------------------------------"));
 	prevTime = new Date().getTime();
 	genTree(block);
 	normalize(block);
 	const data = block.data;
 	currentBlock = block;
 	currentBlockHeight = height;
-	process.stdout.write(chalk.blue("Mining block..."));
-	exec('DCSHA256/bin/Release/DCSHA256.exe', [target, data], function(err, nonce) {
+	process.stdout.write(chalk.magenta("Mining block..."));
+	miningProc = exec('DCSHA256/bin/Release/DCSHA256.exe', [target, data], function(err, nonce) {
+		if(err){
+			return;
+		}
+		
 		var nonce = parseInt(nonce);
 		currentBlock.data += nonce;
 		currentBlock.hash = helpers.sha256(currentBlock.data);
-
+		
+		blocks[currentBlockHeight] = block;
+		addBlock(block, currentBlockHeight);
+		broadcastBlock(block, currentBlockHeight);
+		
 		var now = new Date().getTime();
 		process.stdout.write("\r\x1b[K"); //clear "mining block" message
-		console.log(chalk.blue("Block mined!\n"));
+		console.log(chalk.blue("Mined block!\n"));
 		console.log("Rate:  " + ((nonce/((now-prevTime)/1000))/1000000).toFixed(2) + chalk.gray(" MH/s"));
 		console.log("Diff:  " + difficulty);
 		console.log("Nonce: " + nonce);
 		console.log("Hash:  " + currentBlock.hash);
-		console.log(chalk.red("--------------------------------/ " + currentBlockHeight + " /--------------------------------\n"));
-		newBlockMined(block, currentBlockHeight);
-	});
-}
 
-var newBlockMined = function(block, height){
-	blocks[height] = block;
-	addBlock(block, height);
-	broadcastBlock(block, height);
-	mine(makeFakeBlock());
+		console.log(chalk.green("--------------------------------/ " + currentBlockHeight + " /--------------------------------\n"));
+		mine(makeFakeBlock());
+	});
 }
 
 var genFakeTransactions = function(){
@@ -252,6 +257,7 @@ var verifyBlock = function(block){ //expand, of course
 }
 
 var startUp = function(){
+	helpers.logSolo("DrakeCoin client initialization...\n");
 	console.log("Client running with address: " + address);
 	console.log("Current height: " + blockHeight);
 	server = net.createServer(function(socket) {
@@ -259,9 +265,11 @@ var startUp = function(){
 		socket.on('data', function(data) {
 			try{
 				pData = JSON.parse(data.toString());
-				console.log("------------------RECV: " + pData.type);
-				console.log(pData);
-				console.log("/-----------------RECV");
+				if(serverVerbose){
+					console.log("------------------RECV: " + pData.type);
+					console.log(pData);
+					console.log("/-----------------RECV");
+				}
 				var response = {};
 				switch(pData.type){
 					case "blockHeightRequest":
@@ -278,9 +286,26 @@ var startUp = function(){
 						response = {type: "blockArray", blockArray: blockArray};
 						break;
 					case "minedBlock":
-						var request = {type: "minedBlock", block: block, height: height};
-						addBlock(request.block, request.height);
-						response = {type: "blockRecipt"};
+						//var request = {type: "minedBlock", block: block, height: height};
+						if(verifyBlock(pData.block)){
+							process.stdout.write("\r\x1b[K"); //clear "mining block" message
+							console.log(chalk.red("SNIPED\n"));
+							if(miningProc != null){
+								miningProc.kill();
+							}
+							addBlock(pData.block, pData.height);
+							
+							var expandedNewBlock = helpers.expandBlock(pData.block);
+							console.log("Diff:  " + difficulty);
+							console.log("Nonce: " + expandedNewBlock.nonce);
+							console.log("Hash:  " + expandedNewBlock.hash);
+							console.log(chalk.green("--------------------------------/ " + currentBlockHeight + " /--------------------------------\n"));
+							
+							mine(makeFakeBlock());
+							response = {type: "blockReceipt", stat: true};
+						}else{
+							response = {type: "blockReceipt", stat: false};
+						}
 						break;
 					default:
 						response = {type: "unknownRequest"}
@@ -288,9 +313,11 @@ var startUp = function(){
 				}
 				
 				socket.write(JSON.stringify(response));
-				console.log("------------------SEND: " + response.type);
-				console.log(JSON.stringify(response));
-				console.log("/-----------------SEND");
+				if(serverVerbose){
+					console.log("------------------SEND: " + response.type);
+					console.log(JSON.stringify(response));
+					console.log("/-----------------SEND");
+				}
 			}catch(e){
 			}
 		});
@@ -315,6 +342,11 @@ var synch = function(){
 	client.on('data', function(data) {
 		try{
 			var pData = JSON.parse(data.toString());
+			if(clientVerbose){
+				console.log("------------------RECV: " + pData.type);
+				console.log(pData);
+				console.log("/-----------------RECV");
+			}
 			switch(pData.type){
 				case "blockHeight":
 					console.log("Remote block height: " + pData.blockHeight);
@@ -342,10 +374,16 @@ var synch = function(){
 	});
 
 	client.on('close', function() {
+		if(clientVerbose){
+			console.log("------------------CLIENT CLOSED!");
+		}
 		clientReady();
 	});
 	
 	client.on('error', function(e) {
+		if(clientVerbose){
+			console.log("------------------CLIENT ERROR!");
+		}
 	});
 }
 
@@ -413,9 +451,9 @@ if (process.platform === "win32") {
 
 process.on("SIGINT", function () {
 	var expandedBlocks = helpers.makeExpandedBlocksCopy(blocks);
-	fs.writeFileSync("./debug/testBlocksExpanded.html", helpers.makeHTML(expandedBlocks));
-	fs.writeFileSync("./debug/testBlocks.html", helpers.makeHTML(blocks));
+	fs.writeFileSync("./debug/" + serverPort + "testBlocksExpanded.html", helpers.makeHTML(expandedBlocks));
+	fs.writeFileSync("./debug/" + serverPort + "testBlocks.html", helpers.makeHTML(blocks));
 	process.stdout.write("\r\x1b[K"); //clear "mining block" message
-	console.log(chalk.blue("Cancelled! Blocks dumped to log."));
+	console.log(chalk.yellow("Cancelled! Blocks dumped to log."));
 	process.exit();
 });

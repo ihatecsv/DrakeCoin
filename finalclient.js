@@ -201,6 +201,10 @@ const mine = function(block){
 			minerParams = [target, data];
 			minerLoc = "DCSHA256/bin/Release/DCSHA256";
 			break;
+		case "android":
+			minerParams = [target, data];
+			minerLoc = "DCSHA256/bin/Release/DCSHA256Android";
+			break;
 		default:
 			minerParams = ["jsminer.js", target, data];
 			minerLoc = "node";

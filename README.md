@@ -8,7 +8,7 @@ DrakeCoin is my attempt at writing a cryptocurrency from the ground up.
 
 #### Progress
 Not necessarily in order, or complete:
-- [x] Block construction
+- [x] Block construction (merkle tree)
 - [x] Basic mining (nonce, sha256)
 - [x] Asymmetric key generation, addresses
 - [x] Communication

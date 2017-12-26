@@ -1,5 +1,6 @@
 {
 	"clientIdentifier": 1,
+	"randomClientIdentifier": true,
 	"serverPort": 43330,
 	"neighbors": [
 		{"address": "drakeluce.com", "port": 43330}

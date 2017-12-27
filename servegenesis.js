@@ -1,3 +1,5 @@
+"use strict";
+
 const net = require('net');
 const chalk = require('chalk');
 const helpers = require('./helpers.js');

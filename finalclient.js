@@ -101,7 +101,7 @@ const synch = function(index){
 				console.log("/-------------CLI.RECV");
 			}
 		}catch(e){
-			//console.log(chalk.magenta(e));
+			console.log(chalk.magenta(e));
 		}
 		try{
 			switch(pData.type){
@@ -110,9 +110,11 @@ const synch = function(index){
 					if(blockHeight == "EMPTY" || blocks.length < pData.blockCount){
 						const request = {type: "blockRequest", height: blocks.length};
 						client.send(JSON.stringify(request));
-						console.log("--------------CLI.SEND: " + request.type);
-						console.log(JSON.stringify(request));
-						console.log("/-------------CLI.SEND");
+						if(config.clientVerbose){
+							console.log("--------------CLI.SEND: " + request.type);
+							console.log(JSON.stringify(request));
+							console.log("/-------------CLI.SEND");
+						}
 					}else{
 						clientReady();
 					}
@@ -120,7 +122,6 @@ const synch = function(index){
 				}
 				case "blockDataArray": {
 					for(let i = 0; i < pData.blockDataArray.length; i++){
-						console.log(chalk.blue(i));
 						let recievedBlock = Block.makeCompletedBlock(pData.blockDataArray[i]);
 						if(recievedBlock.isMined()){
 							addBlock(recievedBlock);
@@ -170,6 +171,7 @@ const synch = function(index){
 			console.log("------------------CLIENT CLOSED!");
 		}
 	});
+
 	client.on("error", function error(e) {
 		setTimeout(function(){
 			if(index != config.neighbors.length-1){
@@ -225,6 +227,11 @@ const startServer = function(){
 			}catch(e){
 				console.log(chalk.red(e));
 			}
+		});
+		ws.on("error", function error(e) {
+			console.log(chalk.red(e));
+			console.log("");
+			quitClient();
 		});
 	});
 };
@@ -285,6 +292,18 @@ const getBlocksFromDB = function(height){
 	}
 };
 
+const saveBlocksDebugFile = function(){
+	const blockDatas = helpers.blockArrayToBlockDataArray(blocks);
+	fs.writeFileSync("./debug/" + config.clientIdentifier + "testBlocks.html", helpers.makeHTML(blockDatas));
+};
+
+const quitClient = function(){
+	saveBlocksDebugFile();
+	process.stdout.write("\r\x1b[K"); //clear "mining block" message
+	console.log(chalk.yellow("Quit! Blocks dumped to log."));
+	process.exit();
+};
+
 if(process.platform === "win32"){ //Thanks https://stackoverflow.com/a/14861513
 	const rl = require("readline").createInterface({
 		input: process.stdin,
@@ -297,9 +316,5 @@ if(process.platform === "win32"){ //Thanks https://stackoverflow.com/a/14861513
 }
 
 process.on("SIGINT", function () {
-	const blockDatas = helpers.blockArrayToBlockDataArray(blocks);
-	fs.writeFileSync("./debug/" + config.clientIdentifier + "testBlocks.html", helpers.makeHTML(blockDatas));
-	process.stdout.write("\r\x1b[K"); //clear "mining block" message
-	console.log(chalk.yellow("Cancelled! Blocks dumped to log."));
-	process.exit();
+	quitClient();
 });

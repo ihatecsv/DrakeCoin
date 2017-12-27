@@ -211,12 +211,12 @@ const synch = function(){
 const clientReady = function(){
 	console.log(chalk.green("SYNCH COMPLETE"));
 	startServer();
-	makeFakeBlock().mine(blockMined);
+	currentBlock = makeFakeBlock().mine(blockMined);
 };
 
 const blockMined = function(block){
 	blocks[block.height] = block;
-	makeFakeBlock().mine(blockMined);
+	currentBlock = makeFakeBlock().mine(blockMined);
 };
 
 const addBlock = function(block){

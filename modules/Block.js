@@ -61,6 +61,12 @@ class Block {
 	}
 
 	static makeCompletedBlock(blockData){
+		if(typeof blockData.transactions[0].getHash !== "function"){ 
+			for(let i=0; i < blockData.transactions.length; i++){
+				let realTransaction = Transaction.convertObjToTransaction(blockData.transactions[i]);
+				blockData.transactions[i] = realTransaction;
+			}
+		}
 		let block = new this(blockData.previousHash, blockData.height, blockData.transactions, blockData.target);
 		block.merkleRoot = blockData.merkleRoot;
 		block.nonce = blockData.nonce;

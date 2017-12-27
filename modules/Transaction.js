@@ -31,6 +31,10 @@ class Transaction {
 		const timestamp = Date.now();
 		return new this(null, output, amount, timestamp, null);
 	}
+
+	static convertObjToTransaction(obj){
+		return new this(obj.input, obj.output, obj.amount, obj.timestamp, obj.sig);
+	}
 }
 
 module.exports = Transaction;

@@ -79,14 +79,14 @@ const startServer = function(){
 			try{
 				let pData = JSON.parse(data.toString());
 				if(config.serverVerbose){
-					console.log("------------------RECV: " + pData.type);
+					console.log("--------------SERVRECV: " + pData.type);
 					console.log(pData);
-					console.log("/-----------------RECV");
+					console.log("/-------------SERVRECV");
 				}
 				let response = {};
 				switch(pData.type){
-					case "blockHeightRequest": {
-						response = {type: "blockHeight", blockHeight: blocks.length-1};
+					case "blockCountRequest": {
+						response = {type: "blockCount", blockCount: blocks.length};
 						break;
 					}
 					case "blockRequest": {
@@ -102,7 +102,7 @@ const startServer = function(){
 					}
 					case "minedBlockData": {
 						let recievedBlock = Block.makeCompletedBlock(pData.blockData);
-						if(recievedBlock.isMined()){
+						if(recievedBlock.isMined() && blocks[recievedBlock.height] != null){
 							process.stdout.write("\r\x1b[K"); //clear "mining block" message
 							console.log(chalk.red("SNIPED\n"));
 							if(currentBlock.miningState.miningProc != null){
@@ -132,16 +132,16 @@ const startServer = function(){
 				
 				socket.write(JSON.stringify(response));
 				if(config.serverVerbose){
-					console.log("------------------SEND: " + response.type);
+					console.log("--------------SERVSEND: " + response.type);
 					console.log(JSON.stringify(response));
-					console.log("/-----------------SEND");
+					console.log("/-------------SERVSEND");
 				}
 			}catch(e){
 			}
 		});
 		
 		socket.on("error", function(err) {
-			console.log(chalk.red("SERVER ERROR"));
+			console.log(chalk.red(err));
 			return;
 		});
 	});
@@ -154,26 +154,39 @@ const synch = function(){
 		console.log("Connecting to " + config.neighbors[0].address + ":" + config.neighbors[0].port);
 	}
 	client.connect(config.neighbors[0].port, config.neighbors[0].address, function() {
-		const request = {type: "blockHeightRequest"};
+		const request = {type: "blockCountRequest"};
 		client.write(JSON.stringify(request));
+		if(config.clientVerbose){
+			console.log("--------------CLI.SEND: " + request.type);
+			console.log(JSON.stringify(request));
+			console.log("/-------------CLI.SEND");
+		}
 	});
 
 	client.on("data", function(data) {
+		let pData = null;
 		try{
-			const pData = JSON.parse(data.toString());
+			pData = JSON.parse(data.toString());
 			if(config.clientVerbose){
-				console.log("------------------RECV: " + pData.type);
+				console.log("--------------CLI.RECV: " + pData.type);
 				console.log(pData);
-				console.log("/-----------------RECV");
+				console.log("/-------------CLI.RECV");
 			}
+		}catch(e){
+			//console.log(chalk.magenta(e));
+		}
+		try{
 			switch(pData.type){
-				case "blockHeight":
-					console.log("Remote block height: " + pData.blockHeight);
-					if(blockHeight == "EMPTY" || blockHeight < pData.blockHeight){
-						const request = {type: "blockRequest", height: blockHeight};
+				case "blockCount":
+					console.log("Remote block count: " + pData.blockCount);
+					if(blockHeight == "EMPTY" || blocks.length < pData.blockCount){
+						const request = {type: "blockRequest", height: blocks.length};
 						client.write(JSON.stringify(request));
+						console.log("--------------CLI.SEND: " + request.type);
+						console.log(JSON.stringify(request));
+						console.log("/-------------CLI.SEND");
 					}else{
-						client.destroy();
+						client.end();
 					}
 					break;
 				case "blockDataArray":
@@ -183,10 +196,11 @@ const synch = function(){
 							addBlock(recievedBlock);
 						}
 					}
-					client.destroy();
+					client.end();
 					break;
 			}
 		}catch(e){
+			//console.log(chalk.green(e));
 		}
 	});
 
@@ -196,7 +210,6 @@ const synch = function(){
 		}
 		if(blocks.length == 0){
 			blocks.push(Block.getGenesisBlock());
-			console.log("No blocks found! Mining from genesis block!");
 		}
 		clientReady();
 	});
@@ -215,7 +228,8 @@ const clientReady = function(){
 };
 
 const blockMined = function(block){
-	blocks[block.height] = block;
+	addBlock(block);
+	broadcastBlock(block);
 	currentBlock = makeFakeBlock().mine(blockMined);
 };
 
@@ -230,18 +244,20 @@ const addBlock = function(block){
 
 const broadcastBlock = function(block){
 	for(let i = 0; i < config.neighbors.length; i++){
-		const client = new net.Socket();
 		client.connect(config.neighbors[i].port, config.neighbors[i].address, function() {
-			const request = {type: "minedBlockData", blockData: block.getData()};
+			const request = {type: "minedBlockData", blockData: block.getBlockData()};
 			console.log(chalk.cyan("Sending block " + block.height + " to " + config.neighbors[i].address + ":" + config.neighbors[i].port));
+			console.log(chalk.green(JSON.stringify(request)));
 			client.write(JSON.stringify(request));
-			client.destroy();
+			client.end();
 		});
 
 		client.on("close", function() {
 		});
 		
 		client.on("error", function(e) {
+			console.log(chalk.cyan("BROADCAST ERR"));
+			console.log(chalk.cyan(e));
 		});
 	}
 };

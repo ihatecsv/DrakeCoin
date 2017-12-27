@@ -9,6 +9,14 @@ if(fs.existsSync("sample-config.json")){
 			config.clientIdentifier = Math.floor(Math.random()*10000);
 		}
 
+		if(process.argv[2] != null){
+			config.serverPort = parseInt(process.argv[2]);
+		}
+
+		if(process.argv[3] != null){
+			config.neighbors[0].port = parseInt(process.argv[3]);
+		}
+
 		config.target = "0".repeat(config.difficulty) + "f".repeat(64-config.difficulty);
 	}else{
 		fs.copySync("sample-config.json", "config.json");

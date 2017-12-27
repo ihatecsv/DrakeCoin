@@ -206,7 +206,7 @@ class Block {
 		process.stdout.write("\n");
 	}
 	
-	mine(callback){
+	mine(minerProcCallback, minedCallback){
 		console.log(chalk.red("--------------------------------# " + this.height + " #--------------------------------"));
 		this.timestamp = new Date().getTime();
 		let minerParams = [];
@@ -235,7 +235,7 @@ class Block {
 		const outerThis = this;
 		this.miningState.miningProc = exec(minerLoc, minerParams, function(err, nonce) {
 			if(err){ //TODO: is this right?
-				return;
+				return null;
 			}
 
 			outerThis.nonce = parseInt(nonce);
@@ -249,8 +249,9 @@ class Block {
 			console.log("Nonce: " + outerThis.nonce);
 			console.log("Hash:  " + outerThis.hash);
 			console.log(chalk.red("--------------------------------/ " + outerThis.height + " /--------------------------------\n"));
-			callback(outerThis);     		
+			minedCallback(outerThis);     		
 		});
+		minerProcCallback(this.miningState.miningProc);
 	}
 }
 

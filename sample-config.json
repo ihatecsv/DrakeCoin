@@ -1,13 +1,14 @@
 {
 	"clientIdentifier": 1,
-	"randomClientIdentifier": false,
+	"randomClientIdentifier": true,
 	"serverPort": 43330,
 	"neighbors": [
+		{"address": "localhost", "port": 43331},
 		{"address": "drakeluce.com", "port": 43330}
 	],
-	"difficulty": 5,
-	"fakeTransactions": 16,
-	"merkleTreeHashDispLength": 4,
+	"difficulty": 6,
+	"fakeTransactions": 20,
+	"merkleTreeHashDispLength": 2,
 	"indexMerkleTreeHashOne": true,
 	"clientVerbose": false,
 	"serverVerbose": false

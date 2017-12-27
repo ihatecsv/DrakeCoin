@@ -22,7 +22,8 @@ let account = null;
 
 let minerProc = null;
 
-let server = null;
+let globServer = null;
+let globClient = null;
 
 CLIENTDB.get("privateKey", function (err, value) {
 	if(err && err.type == "NotFoundError"){
@@ -79,19 +80,19 @@ const synch = function(index){
 	if(config.clientVerbose){
 		console.log("Connecting to " + "ws://" + config.neighbors[index].address + ":" + config.neighbors[index].port);
 	}
-	const client = new WebSocket("ws://" + config.neighbors[index].address + ":" + config.neighbors[index].port);
+	globClient = new WebSocket("ws://" + config.neighbors[index].address + ":" + config.neighbors[index].port);
 
-	client.on("open", function open() {
+	globClient.on("open", function open() {
 		const request = {type: "blockCountRequest"};
 		if(config.clientVerbose){
 			console.log("--------------CLI.SEND: " + request.type);
 			console.log(JSON.stringify(request));
 			console.log("/-------------CLI.SEND");
 		}
-		client.send(JSON.stringify(request));
+		globClient.send(JSON.stringify(request));
 	});
 
-	client.on("message", function incoming(data) {
+	globClient.on("message", function incoming(data) {
 		let pData = null;
 		try{
 			pData = JSON.parse(data);
@@ -109,7 +110,7 @@ const synch = function(index){
 					console.log("Remote block count: " + pData.blockCount);
 					if(blockHeight == "EMPTY" || blocks.length < pData.blockCount){
 						const request = {type: "blockRequest", height: blocks.length};
-						client.send(JSON.stringify(request));
+						globClient.send(JSON.stringify(request));
 						if(config.clientVerbose){
 							console.log("--------------CLI.SEND: " + request.type);
 							console.log(JSON.stringify(request));
@@ -132,32 +133,9 @@ const synch = function(index){
 				}
 				case "minedBlockData": {
 					let recievedBlock = Block.makeCompletedBlock(pData.blockData);
-					let response = {};
-					if(recievedBlock.isMined() && blocks[recievedBlock.height] == null){
-						process.stdout.write("\r\x1b[K"); //clear "mining block" message
-						console.log(chalk.red("SNIPED\n"));
-
-						console.log("Target:  " + recievedBlock.target);
-						console.log("Nonce: " + recievedBlock.nonce);
-						console.log("Hash:  " + recievedBlock.hash);
-
-						console.log(chalk.red("--------------------------------/ " + recievedBlock.height + " /--------------------------------\n"));
-
-						if(minerProc){
-							minerProc.kill();
-						}
-
-						addBlock(recievedBlock);
-
-						currentBlock = makeFakeBlock().mine(updateMinerProc, blockMined);
-
-						broadcastBlock(recievedBlock);
-
-						response = {type: "blockReceipt", stat: true};
-					}else{
-						response = {type: "blockReceipt", stat: false};
-					}
-					client.send(JSON.stringify(response));
+					var result = gotNewMinedBlock(recievedBlock);
+					let response = {type: "blockReceipt", stat: result};
+					globClient.send(JSON.stringify(response));
 					break;
 				}
 			}
@@ -166,13 +144,13 @@ const synch = function(index){
 		}
 	});
 
-	client.on("close", function close() {
+	globClient.on("close", function close() {
 		if(config.clientVerbose){
 			console.log("------------------CLIENT CLOSED!");
 		}
 	});
 
-	client.on("error", function error(e) {
+	globClient.on("error", function error(e) {
 		setTimeout(function(){
 			if(index != config.neighbors.length-1){
 				synch(index+1);
@@ -184,9 +162,35 @@ const synch = function(index){
 	});
 };
 
+const gotNewMinedBlock = function(recievedBlock){
+	if(recievedBlock.isMined() && blocks[recievedBlock.height] == null){
+		process.stdout.write("\r\x1b[K"); //clear "mining block" message
+		console.log(chalk.red("SNIPED\n"));
+
+		console.log("Target:  " + recievedBlock.target);
+		console.log("Nonce: " + recievedBlock.nonce);
+		console.log("Hash:  " + recievedBlock.hash);
+
+		console.log(chalk.red("--------------------------------/ " + recievedBlock.height + " /--------------------------------\n"));
+
+		if(minerProc){
+			minerProc.kill();
+		}
+
+		addBlock(recievedBlock);
+
+		currentBlock = makeFakeBlock().mine(updateMinerProc, blockMined);
+
+		broadcastBlock(recievedBlock);
+		return true;
+	}else{
+		return false;
+	}
+};
+
 const startServer = function(){
-	server = new WebSocket.Server({ port: config.serverPort });
-	server.on("connection", function connection(ws) {
+	globServer = new WebSocket.Server({ port: config.serverPort });
+	globServer.on("connection", function connection(ws) {
 		ws.on("message", function incoming(message) {
 			try{
 				let pData = JSON.parse(message);
@@ -210,6 +214,13 @@ const startServer = function(){
 							blockDataArray.push(blocks[i].getBlockData());
 						}
 						response = {type: "blockDataArray", blockDataArray: blockDataArray};
+						break;
+					}
+					case "minedBlockData": {
+						let recievedBlock = Block.makeCompletedBlock(pData.blockData);
+						var result = gotNewMinedBlock(recievedBlock);
+						let response = {type: "blockReceipt", stat: result};
+						ws.send(JSON.stringify(response));
 						break;
 					}
 					default: {
@@ -270,9 +281,12 @@ const addBlock = function(block){
 };
 
 const broadcastBlock = function(block){
-	server.clients.forEach(function each(client) {
+	const request = {type: "minedBlockData", blockData: block.getBlockData()};
+
+	globClient.send(JSON.stringify(request)); //send to first neighbor
+
+	globServer.clients.forEach(function each(client) { //send to connected clients
 		if (client.readyState === WebSocket.OPEN) {
-			const request = {type: "minedBlockData", blockData: block.getBlockData()};
 			client.send(JSON.stringify(request));
 		}
 	});

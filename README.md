@@ -12,7 +12,7 @@ Not necessarily in order, or complete:
 - [x] Basic mining (nonce, sha256)
 - [x] Asymmetric key generation, addresses
 - [x] Communication
-- [ ] Consensus, synchronization (WIP)
+- [x] Consensus, synchronization
 - [ ] Transaction signing
 - [ ] UTXO
 - [ ] Selective mining (TX fees)
@@ -20,7 +20,7 @@ Not necessarily in order, or complete:
 - [ ] Miner GUI client
 
 #### Screenshot
-![Screenshot](https://i.imgur.com/3ua9DTW.png)
+![Screenshot](https://i.imgur.com/Rx5viV7.png)
 
 #### Disclaimer
 * This should not be used as a reference because there's probably something wrong with it.

@@ -185,10 +185,10 @@ class Block {
 		process.stdout.write(" ".repeat(4));
 		for(let i = 0; i < this.leveledHashes[0].length; i++){
 			let index = i;
-			if(config.indexMerkleTreeHashOne){ //let's make this ez
+			if(config.indexmerkletreehashone){ //let's make this ez
 				index++;
 			}
-			var spaceCount = config.merkleTreeHashDispLength-(index.toString().length-1);
+			var spaceCount = config.merkletreehashdisplength-(index.toString().length-1);
 			var spaceString = " ".repeat(spaceCount);
 			process.stdout.write(chalk.gray(index + spaceString));
 		}
@@ -199,7 +199,7 @@ class Block {
 			process.stdout.write("L" + i + ": ");
 			for(let j = 0; j < this.leveledHashes[i].length; j++){
 				const curHash = this.leveledHashes[i][j].getHash();
-				const curHashSnipped = curHash.substring(0, config.merkleTreeHashDispLength) + " ";
+				const curHashSnipped = curHash.substring(0, config.merkletreehashdisplength) + " ";
 				if(curHash == lastHash){ //if a duplicate hash
 					process.stdout.write(chalk.cyan(curHashSnipped));
 				}else{
@@ -213,7 +213,7 @@ class Block {
 	}
 	
 	mine(minerProcCallback, minedCallback){
-		console.log(chalk.red("--------------------------------# " + this.height + " #--------------------------------"));
+		helpers.logSolo(chalk.red("--------------------------------# " + this.height + " #--------------------------------"));
 		this.timestamp = new Date().getTime();
 		let minerParams = [];
 		let minerLoc = "";

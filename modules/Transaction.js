@@ -40,6 +40,7 @@ class Transaction {
 		if(verify.verify(this.publicKey, this.sig)){ //Verify that the sig is valid
 			return false;
 		}
+		//Need to do UTXO first
 		/*
 		if(Account.getAddressFromPublicKey(this.publicKey) == ){
 
@@ -54,6 +55,26 @@ class Transaction {
 
 	getSig(){
 		return this.sig;
+	}
+
+	getTransactionData(){
+		if(this.getSig() != null){
+			const transactionData = {
+				input: this.input,
+				output: this.output,
+				timestamp: this.timestamp,
+				sig: this.sig,
+				publicKey: this.publicKey
+			};
+			return transactionData;
+		}else{
+			return null;
+		}
+	}
+
+	static makeCompletedTransaction(transactionData){ //For expansion?
+		let transaction = new this(transactionData.input, transactionData.output, transactionData.timestamp, transactionData.sig, transactionData.publicKey);
+		return transaction;
 	}
 
 	static makeRewardTransaction(output, amount){ //TODO: determine reward amount

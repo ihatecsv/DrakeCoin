@@ -1,31 +1,64 @@
-const fs = require("fs-extra");
+const config = require("minimist")(process.argv.slice(2));
 
-let config = {};	
-if(fs.existsSync("sample-config.json")){
-	if(fs.existsSync("config.json")){
-		config = JSON.parse(fs.readFileSync("config.json", "utf8"));
+if(config.m == null){
+	config.m = false;
+}
 
-		if(config.randomClientIdentifier){
-			config.clientIdentifier = Math.floor(Math.random()*10000);
-		}
+if(config.identifier == null){
+	config.identifier = Math.floor(Math.random()*1000000);
+}
 
-		if(process.argv[2] != null){
-			config.serverPort = parseInt(process.argv[2]);
-		}
-
-		if(process.argv[3] != null){
-			config.neighbors[0].port = parseInt(process.argv[3]);
-		}
-
-		config.target = "0".repeat(config.difficulty) + "f".repeat(64-config.difficulty);
-	}else{
-		fs.copySync("sample-config.json", "config.json");
-		console.log("Made configuration file! Please edit config.json before running again.");
-		process.exit(0);
-	}
+if(config.difficulty == null){
+	config.difficulty = 6; //TODO: make dynamic difficulty
 }else{
-	console.log("sample-config.json missing!");
-	process.exit(1);
+	config.difficulty = parseInt(config.difficulty);
+}
+config.target = "0".repeat(config.difficulty) + "f".repeat(64-config.difficulty);
+
+if(config.serverport == null){
+	config.serverport = 43330; //TODO: make dynamic difficulty
+}else{
+	config.serverport = parseInt(config.serverport);
+}
+
+if(config.merkletreehashdisplength == null){
+	config.merkletreehashdisplength = 2;
+}else{
+	config.merkletreehashdisplength = parseInt(config.merkletreehashdisplength);
+}
+
+if(config.indexmerkletreehashone == null){
+	config.indexmerkletreehashone = true;
+}else{
+	config.indexmerkletreehashone = config.indexmerkletreehashone == "true";
+}
+
+if(config.clientverbose == null){
+	config.clientverbose = false;
+}else{
+	config.clientverbose = config.clientverbose == "true";
+}
+
+if(config.serververbose == null){
+	config.serververbose = false;
+}else{
+	config.serververbose = config.serververbose == "true";
+}
+
+if(config.neighbors == null){
+	config.neighbors = ["drakeluce.com:43330"];
+}else{
+	config.neighbors = config.neighbors.split(",");
 }
 
 module.exports = config;
+
+// -m / launch as miner
+// --identifier
+// --difficulty
+// --serverport
+// --merkletreehashdisplength // default 2
+// --indexmerkletreehashone // default true
+// --clientverbose // default false
+// --serververbose // default false
+// --neighbors // default drakeluce.com:43330

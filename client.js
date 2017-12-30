@@ -10,9 +10,9 @@ const Block = require("./modules/Block.js");
 const Transaction = require("./modules/Transaction.js");
 const Account = require("./modules/Account.js");
 
-//const UTXODB = level("./DB/UTXODB" + config.clientIdentifier);
-const BLOCKDB = level("./DB/BLOCKDB" + config.clientIdentifier);
-const CLIENTDB = level("./DB/CLIENTDB" + config.clientIdentifier);
+const UTXODB = level("./DB/"  + config.identifier + "/UTXODB");
+const BLOCKDB = level("./DB/"  + config.identifier + "/BLOCKDB");
+const CLIENTDB = level("./DB/"  + config.identifier + "/CLIENTDB");
 
 let blocks = [];
 let currentBlock = null;
@@ -67,14 +67,14 @@ const startUp = function(){
 };
 
 const synch = function(index){
-	if(config.clientVerbose){
-		console.log("Connecting to " + "ws://" + config.neighbors[index].address + ":" + config.neighbors[index].port);
+	if(config.clientverbose){
+		console.log("Connecting to " + "ws://" + config.neighbors[index]);
 	}
-	globClient = new WebSocket("ws://" + config.neighbors[index].address + ":" + config.neighbors[index].port);
+	globClient = new WebSocket("ws://" + config.neighbors[index]);
 
 	globClient.on("open", function open() {
 		const request = {type: "blockCountRequest"};
-		if(config.clientVerbose){
+		if(config.clientverbose){
 			console.log("--------------CLI.SEND: " + request.type);
 			console.log(JSON.stringify(request));
 			console.log("/-------------CLI.SEND");
@@ -86,7 +86,7 @@ const synch = function(index){
 		let pData = null;
 		try{
 			pData = JSON.parse(data);
-			if(config.clientVerbose){
+			if(config.clientverbose){
 				console.log("--------------CLI.RECV: " + pData.type);
 				console.log(data);
 				console.log("/-------------CLI.RECV");
@@ -101,7 +101,7 @@ const synch = function(index){
 					if(blockHeight == "EMPTY" || blocks.length < pData.blockCount){
 						const request = {type: "blockRequest", height: blocks.length};
 						globClient.send(JSON.stringify(request));
-						if(config.clientVerbose){
+						if(config.clientverbose){
 							console.log("--------------CLI.SEND: " + request.type);
 							console.log(JSON.stringify(request));
 							console.log("/-------------CLI.SEND");
@@ -115,7 +115,7 @@ const synch = function(index){
 					for(let i = 0; i < pData.blockDataArray.length; i++){
 						let recievedBlock = Block.makeCompletedBlock(pData.blockDataArray[i]);
 						if(recievedBlock.isMined()){
-							addBlock(recievedBlock);
+							blockFound(recievedBlock);
 						}
 					}
 					clientReady();
@@ -135,7 +135,7 @@ const synch = function(index){
 	});
 
 	globClient.on("close", function close() {
-		if(config.clientVerbose){
+		if(config.clientverbose){
 			console.log("------------------CLIENT CLOSED!");
 		}
 	});
@@ -163,15 +163,7 @@ const gotNewMinedBlock = function(recievedBlock){
 
 		console.log(chalk.red("--------------------------------/ " + recievedBlock.height + " /--------------------------------\n"));
 
-		if(minerProc){
-			minerProc.kill();
-		}
-
-		addBlock(recievedBlock);
-
-		currentBlock = makeEmptyBlock().mine(updateMinerProc, blockMined);
-
-		broadcastBlock(recievedBlock);
+		blockFound(recievedBlock);
 		return true;
 	}else{
 		return false;
@@ -179,12 +171,12 @@ const gotNewMinedBlock = function(recievedBlock){
 };
 
 const startServer = function(){
-	globServer = new WebSocket.Server({ port: config.serverPort });
+	globServer = new WebSocket.Server({ port: config.serverport });
 	globServer.on("connection", function connection(ws) {
 		ws.on("message", function incoming(message) {
 			try{
 				let pData = JSON.parse(message);
-				if(config.serverVerbose){
+				if(config.serververbose){
 					console.log("--------------SERVRECV: " + pData.type);
 					console.log(pData);
 					console.log("/-------------SERVRECV");
@@ -220,7 +212,7 @@ const startServer = function(){
 				}
 				
 				ws.send(JSON.stringify(response));
-				if(config.serverVerbose){
+				if(config.serververbose){
 					console.log("--------------SERVSEND: " + response.type);
 					console.log(JSON.stringify(response));
 					console.log("/-------------SERVSEND");
@@ -230,9 +222,9 @@ const startServer = function(){
 			}
 		});
 		ws.on("error", function error(e) {
-			console.log(chalk.red(e));
-			console.log("");
-			quitClient();
+			//console.log(chalk.red(e));
+			//console.log("");
+			//quitClient();
 		});
 	});
 };
@@ -243,17 +235,24 @@ const clientReady = function(){
 		alreadyReadied = true;
 		console.log(chalk.green("SYNCH COMPLETE"));
 		if(blocks.length == 0){
-			blocks.push(Block.getGenesisBlock());
+			blockFound(Block.getGenesisBlock());
 		}
-		currentBlock = makeEmptyBlock().mine(updateMinerProc, blockMined);
+		if(config.m){
+			currentBlock = makeEmptyBlock().mine(updateMinerProc, blockFound);
+		}
 	}
 };
 
-const blockMined = function(block){
+const blockFound = function(block){
 	if(block != null){
+		if(minerProc){
+			minerProc.kill();
+		}
 		addBlock(block);
 		broadcastBlock(block);
-		currentBlock = makeEmptyBlock().mine(updateMinerProc, blockMined);
+		if(config.m){
+			currentBlock = makeEmptyBlock().mine(updateMinerProc, blockFound);
+		}
 	}
 };
 
@@ -263,17 +262,31 @@ const updateMinerProc = function(iMinerProc){
 
 const addBlock = function(block){
 	blocks[block.height] = block;
-	BLOCKDB.put(block.height, block.getBlockData(), function (err) {
-		if (err) return console.log("Ooops!", err);
+	BLOCKDB.put(block.height, JSON.stringify(block.getBlockData()), function (err) {
+		if(err){
+			console.log(err);
+		}
 	});
 	CLIENTDB.put("blockHeight", block.height, function (err) {
+		if(err){
+			console.log(err);
+		}
+	});
+	block.transactions.forEach(function(transaction){
+		UTXODB.put(transaction.sig, JSON.stringify(transaction.getTransactionData()), function (err) {
+			if(err){
+				console.log(err);
+			}
+		});
 	});
 };
 
 const broadcastBlock = function(block){
 	const request = {type: "minedBlockData", blockData: block.getBlockData()};
 
-	globClient.send(JSON.stringify(request)); //send to first neighbor
+	if(globClient.OPEN){
+		globClient.send(JSON.stringify(request)); //send to first neighbor
+	}
 
 	globServer.clients.forEach(function each(client) { //send to connected clients
 		if (client.readyState === WebSocket.OPEN) {
@@ -298,7 +311,7 @@ const getBlocksFromDB = function(height){
 
 const saveBlocksDebugFile = function(){
 	const blockDatas = helpers.blockArrayToBlockDataArray(blocks);
-	fs.writeFileSync("./debug/" + config.clientIdentifier + "testBlocks.html", helpers.makeHTML(blockDatas));
+	fs.writeFileSync("./debug/" + config.identifier + "testBlocks.html", helpers.makeHTML(blockDatas));
 };
 
 const quitClient = function(){

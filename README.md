@@ -13,7 +13,7 @@ Not necessarily in order, or complete:
 - [x] Asymmetric key generation, addresses
 - [x] Communication
 - [x] Consensus, synchronization
-- [ ] Transaction signing
+- [x] Transaction signing
 - [ ] UTXO
 - [ ] Selective mining (TX fees)
 - [ ] Wallet GUI client

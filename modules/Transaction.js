@@ -30,16 +30,14 @@ class Transaction {
 	}
 
 	verify(){
-		const verify = crypto.createVerify("SHA256");
-		verify.update();
-
 		if(this.amount <= 0){ //Verify that there's no negative spending
 			return false;
 		}
-
+		/*
 		if(verify.verify(this.publicKey, this.sig)){ //Verify that the sig is valid
 			return false;
 		}
+		*/
 		//Need to do UTXO first
 		/*
 		if(Account.getAddressFromPublicKey(this.publicKey) == ){
@@ -62,6 +60,7 @@ class Transaction {
 			const transactionData = {
 				input: this.input,
 				output: this.output,
+				amount: this.amount,
 				timestamp: this.timestamp,
 				sig: this.sig,
 				publicKey: this.publicKey
@@ -73,7 +72,7 @@ class Transaction {
 	}
 
 	static makeCompletedTransaction(transactionData){ //For expansion?
-		let transaction = new this(transactionData.input, transactionData.output, transactionData.timestamp, transactionData.sig, transactionData.publicKey);
+		let transaction = new this(transactionData.input, transactionData.output, transactionData.amount, transactionData.timestamp, transactionData.sig, transactionData.publicKey);
 		return transaction;
 	}
 

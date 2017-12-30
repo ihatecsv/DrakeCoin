@@ -2,6 +2,7 @@ const WebSocket = require("ws");
 const level = require("level");
 const chalk = require("chalk");
 const fs = require("fs");
+var readline = require("readline");
 
 const config = require("./modules/config.js");
 const helpers = require("./modules/helpers.js");
@@ -14,8 +15,16 @@ const UTXODB = level("./DB/"  + config.identifier + "/UTXODB");
 const BLOCKDB = level("./DB/"  + config.identifier + "/BLOCKDB");
 const CLIENTDB = level("./DB/"  + config.identifier + "/CLIENTDB");
 
+const rl = readline.createInterface({
+	input: process.stdin,
+	output: process.stdout,
+	terminal: false
+});
+
 let blocks = [];
 let currentBlock = null;
+
+let transactionQueue = [];
 
 let blockHeight = "EMPTY";
 let account = null;
@@ -128,6 +137,13 @@ const synch = function(index){
 					globClient.send(JSON.stringify(response));
 					break;
 				}
+				case "unconfirmedTransaction": {
+					let recievedTransaction = Transaction.makeCompletedTransaction(pData.transactionData);
+					let result = gotNewUnconfirmedTransaction(recievedTransaction);
+					let response = {type: "transactionReciept", stat: result};
+					globClient.send(JSON.stringify(response));
+					break;
+				}
 			}
 		}catch(e){
 			console.log(chalk.green(e));
@@ -154,19 +170,21 @@ const synch = function(index){
 
 const gotNewMinedBlock = function(recievedBlock){
 	if(recievedBlock.isMined() && blocks[recievedBlock.height] == null){
-		process.stdout.write("\r\x1b[K"); //clear "mining block" message
-		console.log(chalk.red("SNIPED\n"));
-
-		console.log("Target:  " + recievedBlock.target);
-		console.log("Nonce: " + recievedBlock.nonce);
-		console.log("Hash:  " + recievedBlock.hash);
-
-		console.log(chalk.red("--------------------------------/ " + recievedBlock.height + " /--------------------------------\n"));
-
 		blockFound(recievedBlock);
 		return true;
 	}else{
 		return false;
+	}
+};
+
+const gotNewUnconfirmedTransaction = function(recievedTransaction){
+	if (transactionQueue.filter(function(item){return item.sig === recievedTransaction.sig;}).length == 0) {
+		if(recievedTransaction.verify()){
+			transactionFound(recievedTransaction);
+			return true;
+		}else{
+			return false;
+		}
 	}
 };
 
@@ -200,9 +218,16 @@ const startServer = function(){
 					}
 					case "minedBlockData": {
 						let recievedBlock = Block.makeCompletedBlock(pData.blockData);
-						var result = gotNewMinedBlock(recievedBlock);
+						let result = gotNewMinedBlock(recievedBlock);
 						let response = {type: "blockReceipt", stat: result};
 						ws.send(JSON.stringify(response));
+						break;
+					}
+					case "unconfirmedTransaction": {
+						let recievedTransaction = Transaction.makeCompletedTransaction(pData.transactionData);
+						let result = gotNewUnconfirmedTransaction(recievedTransaction);
+						let response = {type: "transactionReciept", stat: result};
+						globClient.send(JSON.stringify(response));
 						break;
 					}
 					default: {
@@ -217,13 +242,14 @@ const startServer = function(){
 					console.log(JSON.stringify(response));
 					console.log("/-------------SERVSEND");
 				}
+				
 			}catch(e){
-				console.log(chalk.red(e));
+				console.log(chalk.cyan(e));
 			}
+			
 		});
 		ws.on("error", function error(e) {
 			//console.log(chalk.red(e));
-			//console.log("");
 			//quitClient();
 		});
 	});
@@ -245,15 +271,47 @@ const clientReady = function(){
 
 const blockFound = function(block){
 	if(block != null){
+		if(config.m){
+			process.stdout.write("\r\x1b[K"); //clear "mining block" message
+			console.log(chalk.red("SNIPED\n"));
+
+			console.log("Target:  " + block.target);
+			console.log("Nonce: " + block.nonce);
+			console.log("Hash:  " + block.hash);
+
+			console.log(chalk.red("--------------------------------/ " + block.height + " /--------------------------------\n"));
+		}
 		if(minerProc){
 			minerProc.kill();
 		}
 		addBlock(block);
 		broadcastBlock(block);
+		removeBlockTransactionsFromQueue(block);
 		if(config.m){
-			currentBlock = makeEmptyBlock().mine(updateMinerProc, blockFound);
+			mineNewBlock();
 		}
 	}
+};
+
+const transactionFound = function(transaction){
+	if(transaction != null){
+		if(minerProc){
+			minerProc.kill();
+		}
+		addTransaction(transaction);
+		broadcastTransaction(transaction);
+		if(config.m){
+			mineNewBlock();
+		}
+	}
+};
+
+const mineNewBlock = function(){
+	currentBlock = makeEmptyBlock();
+	for(let i = 0; i < transactionQueue.length; i++){
+		currentBlock.addTransaction(transactionQueue[i]);
+	}
+	currentBlock.mine(updateMinerProc, blockFound);
 };
 
 const updateMinerProc = function(iMinerProc){
@@ -281,9 +339,29 @@ const addBlock = function(block){
 	});
 };
 
+const removeBlockTransactionsFromQueue = function(block){
+	for(let i = 0; i < block.transactions.length; i++){
+		const index = transactionQueue.map(function(transaction){return transaction.sig;}).indexOf(block.transactions[i].sig);
+		transactionQueue.splice(index);
+	}
+};
+
+const addTransaction = function(transaction){
+	console.log(chalk.cyan("Added transaction " + transaction.sig + " to queue"));
+	transactionQueue.push(transaction); //more?
+};
+
 const broadcastBlock = function(block){
 	const request = {type: "minedBlockData", blockData: block.getBlockData()};
+	broadcastRequest(request);
+};
 
+const broadcastTransaction = function(transaction){
+	const request = {type: "unconfirmedTransaction", transactionData: transaction.getTransactionData()};
+	broadcastRequest(request);
+};
+
+const broadcastRequest = function(request){
 	if(globClient.OPEN){
 		globClient.send(JSON.stringify(request)); //send to first neighbor
 	}
@@ -320,6 +398,17 @@ const quitClient = function(){
 	console.log(chalk.yellow("Quit! Blocks dumped to log."));
 	process.exit();
 };
+if(!config.m){
+	rl.on("line", function(line){
+		switch(line){
+			case "bT": {
+				let newTrans = new Transaction("someTrans", account.getAddress(), Math.floor(Math.random()*100), Date.now(), null, null);
+				newTrans.sign(account);
+				transactionFound(newTrans);
+			}
+		}
+	});
+}
 
 if(process.platform === "win32"){ //Thanks https://stackoverflow.com/a/14861513
 	const rl = require("readline").createInterface({

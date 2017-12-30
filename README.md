@@ -14,7 +14,7 @@ Not necessarily in order, or complete:
 - [x] Communication
 - [x] Consensus, synchronization
 - [x] Transaction signing
-- [ ] UTXO
+- [x] UTXO
 - [ ] Selective mining (TX fees)
 - [ ] Wallet GUI client
 - [ ] Miner GUI client

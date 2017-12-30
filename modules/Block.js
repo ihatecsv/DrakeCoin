@@ -72,10 +72,7 @@ class Block {
 		block.nonce = blockData.nonce;
 		block.hash = blockData.hash;
 		block.timestamp = blockData.timestamp;
-		if(block.isMined()){
-			return block;
-		}
-		return null;
+		return block;
 	}
 
 	static getGenesisBlock(){
@@ -83,13 +80,20 @@ class Block {
 			previousHash: "0000000000000000000000000000000000000000000000000000000000000000",
 			height: 0,
 			transactions: [
-				new Transaction(null, "DL9fSHaRHYhLw5kiYNMDU9wJaPVKxSM4KT", 25000000, 1514334356583, null)
+				new Transaction(
+					null, //input
+					"DKcuMc1rQ4GK3yQUubrZrbMkTtPvWEuhoa", //output
+					25000000, //reward
+					1514599004624, //timestamp
+					"ed4810d4588935f69664f6cef27b84f4f62f1167422661d6f5ff568779c6df297b7fa91d91d27e796ac97bb1ab95a1cd0dc31fc4f35b8578104a63d4dcd6dfe6", //sig
+					"02901eff56e89e82cc8cd4b125bdfbd6d600227b87883d30d3a1dc94d6b5d5b415" //pubkey
+				)
 			],
 			target: "00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-			merkleRoot: "860c1fdbca82ecc3e632b65a6c9bf13498ff6ff3931a6b19c074547a9922bd03",
-			nonce: 394557,
-			hash: "00000d68643e39d16044d3e98707a0902139dd8984f9f960b55e3c1bd5d927e2",
-			timestamp: 1514334356587
+			merkleRoot: "5c96b78b095d1817b45ea775594c42f41c992bc2ba2d143768e9a221448fdf2f",
+			nonce: 870536,
+			hash: "00000b921a32e7425ae6bb6c272bca800895291f7c99824dabc7415e7a86ebf7",
+			timestamp: 1514599004679
 		};
 		return this.makeCompletedBlock(genesisBlockData);
 	}
@@ -148,7 +152,9 @@ class Block {
 		
 		this.leveledHashes[cL] = [];
 		for(let i = 0; i < transactions.length; i++){ //go through each transaction,
-			let newNode = new MerkleNode(null, null, null, transactions[i].getHash()); //add each one to a new merkle node
+			const sig = transactions[i].getSig();
+			const hash = helpers.sha256(sig);
+			const newNode = new MerkleNode(null, null, null, hash); //add each one to a new merkle node
 			newNode.computeHash(); //compute the hash
 			this.leveledHashes[cL].push(newNode); //push to the current (bottom) level of the tree
 		}

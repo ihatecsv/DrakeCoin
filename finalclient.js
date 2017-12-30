@@ -48,21 +48,11 @@ CLIENTDB.get("privateKey", function (err, value) {
 	});
 });
 
-const genFakeTransactions = function(){
-	let transactions = [];
-	const numOfTransactions = Math.floor(Math.random()*config.fakeTransactions);
-	for(let i = 0; i < numOfTransactions; i++){
-		const time = Date.now();
-		const trans = new Transaction("someInputTX", Account.randomAccount().getAddress(), Math.ceil(Math.random()*1000000), time, "aaa");
-		transactions.push(trans);
-	}
-	return transactions;
-};
-
-const makeFakeBlock = function(){
-	let block = new Block(blocks[blocks.length-1].hash, blocks.length, genFakeTransactions(), config.target);
+const makeEmptyBlock = function(){
+	let block = new Block(blocks[blocks.length-1].hash, blocks.length, [], config.target);
 
 	const minerTransaction = Transaction.makeRewardTransaction(account.getAddress(), 25000000);
+	minerTransaction.sign(account);
 	block.addTransaction(minerTransaction);
 
 	return block;
@@ -179,7 +169,7 @@ const gotNewMinedBlock = function(recievedBlock){
 
 		addBlock(recievedBlock);
 
-		currentBlock = makeFakeBlock().mine(updateMinerProc, blockMined);
+		currentBlock = makeEmptyBlock().mine(updateMinerProc, blockMined);
 
 		broadcastBlock(recievedBlock);
 		return true;
@@ -255,7 +245,7 @@ const clientReady = function(){
 		if(blocks.length == 0){
 			blocks.push(Block.getGenesisBlock());
 		}
-		currentBlock = makeFakeBlock().mine(updateMinerProc, blockMined);
+		currentBlock = makeEmptyBlock().mine(updateMinerProc, blockMined);
 	}
 };
 
@@ -263,7 +253,7 @@ const blockMined = function(block){
 	if(block != null){
 		addBlock(block);
 		broadcastBlock(block);
-		currentBlock = makeFakeBlock().mine(updateMinerProc, blockMined);
+		currentBlock = makeEmptyBlock().mine(updateMinerProc, blockMined);
 	}
 };
 

@@ -30,9 +30,17 @@ class Account {
 		return this.keypair.getPrivateKey().toString("hex").toUpperCase();
 	}
 
+	getPublicKey(){
+		return this.keypair.getPublicKey().toString("hex").toUpperCase();
+	}
+
 	generateAddress(){
-		const privateBuffer = this.keypair.getPrivateKey();
-		const publicBuffer = this.keypair.getPublicKey();
+		const publicKey = this.getPublicKey();
+		this.address = Account.getAddressFromPublicKey(publicKey);
+	}
+
+	static getAddressFromPublicKey(publicKey){
+		const publicBuffer = Buffer.from(publicKey, "hex");
 
 		const hashBuffer = crypto.createHash("sha256").update(publicBuffer).digest(); //2
 		const ripeBuffer = new RIPEMD160().update(hashBuffer).digest(); //3
@@ -64,11 +72,8 @@ class Account {
 			}
 		}
 
-		this.address = outputString.split("").reverse().join("");
-
 		if(this.debug){
 			console.log("=================================================");
-			console.log("Private key: " + privateBuffer.toString("hex").toUpperCase());
 			console.log("Public key: " + publicBuffer.toString("hex").toUpperCase());
 			console.log("Hash: " + hashBuffer.toString("hex").toUpperCase());
 			console.log("Ripe: " + ripeBuffer.toString("hex").toUpperCase());
@@ -80,6 +85,8 @@ class Account {
 			console.log("Address: " + this.address);
 			console.log("=================================================");
 		}
+
+		return outputString.split("").reverse().join("");
 	}
 }
 

@@ -213,7 +213,7 @@ class Block {
 	}
 	
 	mine(minerProcCallback, minedCallback){
-		helpers.logSolo(chalk.red("--------------------------------# " + this.height + " #--------------------------------"));
+		console.log(chalk.red("--------------------------------# " + this.height + " #--------------------------------"));
 		this.timestamp = new Date().getTime();
 		let minerParams = [];
 		let minerLoc = "";

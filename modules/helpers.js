@@ -42,3 +42,7 @@ module.exports.sha256 = function(string){
 module.exports.blockArrayToBlockDataArray = function(blocks){
 	return blocks.map(x => x.getBlockData());
 };
+
+module.exports.transactionArrayToTransactionDataArray = function(transactions){
+	return transactions.map(x => x.getTransactionData());
+};

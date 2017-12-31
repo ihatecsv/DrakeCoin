@@ -1,19 +1,16 @@
 const WebSocket = require("ws");
-const level = require("level");
+
 const chalk = require("chalk");
 const fs = require("fs");
 var readline = require("readline");
 
 const config = require("./modules/config.js");
+const database = require("./modules/database.js");
 const helpers = require("./modules/helpers.js");
 
 const Block = require("./modules/Block.js");
 const Transaction = require("./modules/Transaction.js");
 const Account = require("./modules/Account.js");
-
-const UTXODB = level("./DB/"  + config.identifier + "/UTXODB");
-const BLOCKDB = level("./DB/"  + config.identifier + "/BLOCKDB");
-const CLIENTDB = level("./DB/"  + config.identifier + "/CLIENTDB");
 
 const rl = readline.createInterface({
 	input: process.stdin,
@@ -24,7 +21,11 @@ const rl = readline.createInterface({
 let blocks = [];
 let currentBlock = null;
 
+let recvTransBuff = [];
+
 let transactionQueue = [];
+
+let temporaryUTXOObj = {}; //TODO: not happy with this
 
 let blockHeight = "EMPTY";
 let account = null;
@@ -34,19 +35,19 @@ let minerProc = null;
 let globServer = null;
 let globClient = null;
 
-CLIENTDB.get("privateKey", function (err, value) {
+database.CLIENTDB.get("privateKey", function (err, value) {
 	if(err && err.type == "NotFoundError"){
 		console.log("Generating new address!");
 		account = Account.randomAccount();
-		CLIENTDB.put("privateKey", account.getPrivateKey(), function (err) {
+		database.CLIENTDB.put("privateKey", account.getPrivateKey(), function (err) {
 			if (err) return console.log("Ooops!", err);
 		});
 	}else{
 		account = new Account(value);
 	}
-	CLIENTDB.get("blockHeight", function (err, value) {
+	database.CLIENTDB.get("blockHeight", function (err, value) {
 		if(err && err.type == "NotFoundError"){
-			CLIENTDB.put("blockHeight", "EMPTY", function (err) {
+			database.CLIENTDB.put("blockHeight", "EMPTY", function (err) {
 				if (err) return console.log("Ooops!", err);
 			});
 		}else{
@@ -70,6 +71,7 @@ const makeEmptyBlock = function(){
 const startUp = function(){
 	helpers.logSolo("DrakeCoin client initialization...\n");
 	console.log("Client running with address: " + account.getAddress());
+	console.log("Client running with public key: " + account.getPublicKey());
 	console.log("Current height: " + blockHeight);
 	startServer();
 	synch(0);
@@ -132,6 +134,7 @@ const synch = function(index){
 				}
 				case "minedBlockData": {
 					let recievedBlock = Block.makeCompletedBlock(pData.blockData);
+
 					var result = gotNewMinedBlock(recievedBlock);
 					let response = {type: "blockReceipt", stat: result};
 					globClient.send(JSON.stringify(response));
@@ -139,8 +142,8 @@ const synch = function(index){
 				}
 				case "unconfirmedTransaction": {
 					let recievedTransaction = Transaction.makeCompletedTransaction(pData.transactionData);
-					let result = gotNewUnconfirmedTransaction(recievedTransaction);
-					let response = {type: "transactionReciept", stat: result};
+					gotNewUnconfirmedTransaction(recievedTransaction);
+					let response = {type: "transactionReciept"};
 					globClient.send(JSON.stringify(response));
 					break;
 				}
@@ -178,13 +181,26 @@ const gotNewMinedBlock = function(recievedBlock){
 };
 
 const gotNewUnconfirmedTransaction = function(recievedTransaction){
-	if (transactionQueue.filter(function(item){return item.sig === recievedTransaction.sig;}).length == 0) {
-		if(recievedTransaction.verify()){
-			transactionFound(recievedTransaction);
-			return true;
-		}else{
-			return false;
-		}
+	if(recvTransBuff.filter(function(item){return item.sig == recievedTransaction.sig;}).length == 0){ //add to dup buffer
+		recvTransBuff.push(recievedTransaction);
+	}else{
+		return;
+	}
+	if(transactionQueue.filter(function(item){return item.sig == recievedTransaction.sig;}).length == 0){ //if we don't have this one yet
+		console.log(recievedTransaction);
+		recievedTransaction.verify(temporaryUTXOObj, function(verified, err){
+			if(verified){
+				console.log(chalk.green("Transaction verified!"));
+				transactionFound(recievedTransaction);
+
+				const index = recvTransBuff.map(function(transaction){return transaction.sig;}).indexOf(recievedTransaction.sig); //remove from dup buffer
+				recvTransBuff.splice(index);
+			}else{
+				console.log(chalk.red("Transaction denied: " + err));
+			}
+		});
+	}else{
+		//console.log(chalk.red("Transaction denied: " + "Already exists in queue!"));
 	}
 };
 
@@ -225,8 +241,8 @@ const startServer = function(){
 					}
 					case "unconfirmedTransaction": {
 						let recievedTransaction = Transaction.makeCompletedTransaction(pData.transactionData);
-						let result = gotNewUnconfirmedTransaction(recievedTransaction);
-						let response = {type: "transactionReciept", stat: result};
+						gotNewUnconfirmedTransaction(recievedTransaction);
+						let response = {type: "transactionReciept"};
 						globClient.send(JSON.stringify(response));
 						break;
 					}
@@ -285,6 +301,7 @@ const blockFound = function(block){
 			minerProc.kill();
 		}
 		addBlock(block);
+		updateUTXO(block); //TODO: we need to check 
 		broadcastBlock(block);
 		removeBlockTransactionsFromQueue(block);
 		if(config.m){
@@ -320,18 +337,18 @@ const updateMinerProc = function(iMinerProc){
 
 const addBlock = function(block){
 	blocks[block.height] = block;
-	BLOCKDB.put(block.height, JSON.stringify(block.getBlockData()), function (err) {
+	database.BLOCKDB.put(block.height, JSON.stringify(block.getBlockData()), function (err) {
 		if(err){
 			console.log(err);
 		}
 	});
-	CLIENTDB.put("blockHeight", block.height, function (err) {
+	database.CLIENTDB.put("blockHeight", block.height, function (err) {
 		if(err){
 			console.log(err);
 		}
 	});
 	block.transactions.forEach(function(transaction){
-		UTXODB.put(transaction.sig, JSON.stringify(transaction.getTransactionData()), function (err) {
+		database.UTXODB.put(transaction.sig, JSON.stringify(transaction.getTransactionData()), function (err) {
 			if(err){
 				console.log(err);
 			}
@@ -342,12 +359,21 @@ const addBlock = function(block){
 const removeBlockTransactionsFromQueue = function(block){
 	for(let i = 0; i < block.transactions.length; i++){
 		const index = transactionQueue.map(function(transaction){return transaction.sig;}).indexOf(block.transactions[i].sig);
-		transactionQueue.splice(index);
+		if(index != null){
+			transactionQueue.splice(index);
+		}
 	}
 };
 
+const updateUTXO = function(block){
+	for(let i = 0; i < block.transactions.length; i++){
+		block.transactions[i].execute();
+	}
+	temporaryUTXOObj = {};
+};
+
 const addTransaction = function(transaction){
-	console.log(chalk.cyan("Added transaction " + transaction.sig + " to queue"));
+	//console.log(chalk.cyan("Added transaction " + transaction.sig + " to queue"));
 	transactionQueue.push(transaction); //more?
 };
 
@@ -375,7 +401,7 @@ const broadcastRequest = function(request){
 
 const getBlocksFromDB = function(height){
 	for(let i = 0; i <= height; i++){
-		BLOCKDB.get(i, function (err, value) {
+		database.BLOCKDB.get(i, function (err, value) {
 			if(err && err.type == "NotFoundError"){
 				console.log("WTF?!", err);
 			}else{
@@ -389,7 +415,9 @@ const getBlocksFromDB = function(height){
 
 const saveBlocksDebugFile = function(){
 	const blockDatas = helpers.blockArrayToBlockDataArray(blocks);
+	const transactionDatas = helpers.transactionArrayToTransactionDataArray(transactionQueue);
 	fs.writeFileSync("./debug/" + config.identifier + "testBlocks.html", helpers.makeHTML(blockDatas));
+	fs.writeFileSync("./debug/" + config.identifier + "testTransactions.html", helpers.makeHTML(transactionDatas));
 };
 
 const quitClient = function(){
@@ -400,10 +428,12 @@ const quitClient = function(){
 };
 if(!config.m){
 	rl.on("line", function(line){
-		switch(line){
+		const commands = line.split(" ");
+		switch(commands[0]){
 			case "bT": {
-				let newTrans = new Transaction("someTrans", account.getAddress(), Math.floor(Math.random()*100), Date.now(), null, null);
+				let newTrans = new Transaction(commands[2], "DKcuMc1rQ4GK3yQUubrZrbMkTtPvWEuhoa", parseInt(commands[1]), Date.now(), null, null);
 				newTrans.sign(account);
+				console.log(newTrans.getTransactionData());
 				transactionFound(newTrans);
 			}
 		}

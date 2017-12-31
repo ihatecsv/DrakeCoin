@@ -1,7 +1,11 @@
 const crypto = require("crypto");
 const secp256k1 = require("secp256k1");
+const chalk = require("chalk");
 
 const helpers = require("./helpers.js");
+const database = require("./database.js");
+
+const Account = require("./Account.js");
 
 class Transaction {
 	constructor(input, output, amount, timestamp, sig, publicKey){
@@ -16,7 +20,6 @@ class Transaction {
 	sign(account){
 		// get the public key in a compressed format
 		const privKey = account.keypair.getPrivateKey();
-		const pubKey = secp256k1.publicKeyCreate(privKey);
 
 		const msgHash = crypto.createHash("sha256").update(this.getSignableData()).digest();
 
@@ -24,27 +27,101 @@ class Transaction {
 
 		this.sig = sigObj.signature.toString("hex");
 
-		this.publicKey = pubKey.toString("hex");
+		this.publicKey = account.getPublicKey();
 
 		return this.sig;
 	}
 
-	verify(){
+	verify(temporaryUTXOObj, verifiedCallback){
 		if(this.amount <= 0){ //Verify that there's no negative spending
-			return false;
+			verifiedCallback(false, "Zero or negative amount!");
+			return;
 		}
-		/*
-		if(verify.verify(this.publicKey, this.sig)){ //Verify that the sig is valid
-			return false;
-		}
-		*/
-		//Need to do UTXO first
-		/*
-		if(Account.getAddressFromPublicKey(this.publicKey) == ){
 
+		const msgHash = crypto.createHash("sha256").update(this.getSignableData()).digest();
+		let buffSig = Buffer.from(this.sig, "hex");
+		let buffPubKey = Buffer.from(this.publicKey, "hex");
+		if(!secp256k1.verify(msgHash, buffSig, buffPubKey)){
+			verifiedCallback(false, "Signature invalid!");
+			return;
 		}
-		*/
-		return true;
+		if(this.input == null){
+			verifiedCallback(true, null);
+		}
+
+		const outerThis = this;
+
+		const checkInput = function(){
+			if(temporaryUTXOObj[outerThis.input].output != Account.getAddressFromPublicKey(outerThis.publicKey)){
+				verifiedCallback(false, "Transaction not signed by input owner!");
+				return;
+			}
+
+			if(temporaryUTXOObj[outerThis.input].balance == null){
+				temporaryUTXOObj[outerThis.input].balance = temporaryUTXOObj[outerThis.input].amount;
+			}
+
+			if(outerThis.amount > temporaryUTXOObj[outerThis.input].balance){
+				verifiedCallback(false, "Spending more than UTXO balance!");
+				return;
+			}
+
+			verifiedCallback(true, null);
+			return;
+		};
+
+		if(temporaryUTXOObj[this.input] == null){
+			database.UTXODB.get(this.input, function (err, inputTransactionString) {
+				if(err){
+					verifiedCallback(false, "UTXO input doesn't exist!");
+					return;
+				}
+				let inputTransactionData = JSON.parse(inputTransactionString);
+				let inputTransaction = Transaction.makeCompletedTransaction(inputTransactionData);
+				temporaryUTXOObj[outerThis.input] = inputTransaction;
+				checkInput();
+			});
+		}else{
+			checkInput();
+		}
+	}
+
+	execute(){ //Update UTXO to solidify TX
+		if(this.input == null){ //miner trans, doesn't need to execute
+			return;
+		}
+		const outerThis = this;
+		database.UTXODB.get(this.input, function (err, inputTransactionString) {
+			let inputTransactionData = JSON.parse(inputTransactionString);
+			let inputTransaction = Transaction.makeCompletedTransaction(inputTransactionData);
+
+			if(inputTransaction.balance == null){
+				inputTransaction.balance = inputTransaction.amount;
+			}
+
+			if(outerThis.amount > inputTransaction.balance){
+				console.log(chalk.red("5521 THIS SHOULD NEVER HAPPEN!"));
+				return;
+			}
+
+			inputTransaction.balance -= outerThis.amount;
+
+			if(inputTransaction.balance != 0){
+				let updatedInputTransactionData = inputTransaction.getTransactionData();
+
+				database.UTXODB.put(inputTransaction.sig, JSON.stringify(updatedInputTransactionData), function (err) {
+					if(err){
+						console.log(err);
+					}
+				});
+			}else{
+				database.UTXODB.del(inputTransaction.sig, function (err) {
+					if(err){
+						console.log(err);
+					}
+				});
+			}
+		});
 	}
 
 	getSignableData(){
@@ -65,6 +142,9 @@ class Transaction {
 				sig: this.sig,
 				publicKey: this.publicKey
 			};
+			if(this.balance != null){
+				transactionData.balance = this.balance;
+			}
 			return transactionData;
 		}else{
 			return null;
@@ -73,6 +153,9 @@ class Transaction {
 
 	static makeCompletedTransaction(transactionData){ //For expansion?
 		let transaction = new this(transactionData.input, transactionData.output, transactionData.amount, transactionData.timestamp, transactionData.sig, transactionData.publicKey);
+		if(transactionData.balance != null){
+			transaction.balance = transactionData.balance;
+		}
 		return transaction;
 	}
 

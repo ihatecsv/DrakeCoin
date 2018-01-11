@@ -6,6 +6,8 @@
 
 DrakeCoin is my attempt at writing a cryptocurrency from the ground up.
 
+A blog post on the project can be found [here](https://drakeluce.com/blog/?p=126)!
+
 #### Progress
 Not necessarily in order, or complete:
 - [x] Block construction (merkle tree)

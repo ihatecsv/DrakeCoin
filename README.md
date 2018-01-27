@@ -20,6 +20,7 @@ Not necessarily in order, or complete:
 - [ ] Selective mining (TX fees)
 - [ ] Wallet GUI client
 - [ ] Miner GUI client
+- [ ] Control flow and class restructure
 
 #### Screenshot
 ![Screenshot](https://i.imgur.com/Rx5viV7.png)

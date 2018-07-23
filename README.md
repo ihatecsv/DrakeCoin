@@ -8,6 +8,10 @@ DrakeCoin is my attempt at writing a cryptocurrency from the ground up.
 
 A blog post on the project can be found [here](https://drakeluce.com/blog/?p=126)!
 
+#### Disclaimer
+* This should not be used as a reference for writing your own cryptocurrency, I can't guarantee the validity of my code.
+* This is not really as modular or neat as it should be; I intend on rewriting this project from scratch!
+
 #### Progress
 Not necessarily in order, or complete:
 - [x] Block construction (merkle tree)
@@ -24,6 +28,3 @@ Not necessarily in order, or complete:
 
 #### Screenshot
 ![Screenshot](https://i.imgur.com/Rx5viV7.png)
-
-#### Disclaimer
-* This should not be used as a reference because there's probably something wrong with it.
